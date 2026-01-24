@@ -25,7 +25,8 @@ import {
   Loader2,
   RefreshCw,
   Building2,
-  LayoutGrid
+  LayoutGrid,
+  History
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { StockSummary, StockFullView } from '@/types/database'
@@ -206,7 +207,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Link href="/stock/entry">
             <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer group">
               <CardContent className="p-4 flex items-center gap-3">
@@ -272,6 +273,20 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-semibold text-white">Yerleşim</p>
                   <p className="text-xs text-slate-400">Raf görünümü</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/movements">
+            <Card className="bg-gradient-to-br from-pink-500/10 to-pink-600/5 border-pink-500/20 hover:border-pink-500/40 transition-all cursor-pointer group">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-pink-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <History className="w-5 h-5 text-pink-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Hareketler</p>
+                  <p className="text-xs text-slate-400">Giriş/Çıkış log</p>
                 </div>
               </CardContent>
             </Card>
