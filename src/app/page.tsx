@@ -29,6 +29,7 @@ import {
   History
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
 import type { StockSummary, StockFullView } from '@/types/database'
 
 interface DashboardStats {
@@ -399,6 +400,39 @@ export default function DashboardPage() {
                 <Badge className="bg-blue-500/20 text-blue-400 border-0">YDS</Badge>
                 <Badge className="bg-blue-500/20 text-blue-400 border-0">Starline</Badge>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="bg-slate-800/50 border-slate-700/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-sm">Ürün Dağılımı</CardTitle>
+              <CardDescription className="text-slate-400 text-xs">
+                Tekstil ve ayakkabı ürün sayıları
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StockPieChart
+                textileCount={stats?.textileCount || 0}
+                shoesCount={stats?.shoesCount || 0}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-sm">Depo Doluluk Oranı</CardTitle>
+              <CardDescription className="text-slate-400 text-xs">
+                180 hücreden kullanılanlar
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LocationChart
+                filled={stats?.locationsFilled || 0}
+                total={stats?.totalLocations || 180}
+              />
             </CardContent>
           </Card>
         </div>
