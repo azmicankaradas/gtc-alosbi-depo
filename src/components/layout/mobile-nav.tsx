@@ -7,15 +7,15 @@ import {
     Plus,
     Search,
     Package,
-    LayoutGrid
+    FileText
 } from 'lucide-react'
 
 const navItems = [
-    { href: '/', icon: Home, label: 'Ana Sayfa' },
+    { href: '/', icon: Home, label: 'Ana' },
     { href: '/stock/entry', icon: Plus, label: 'Giriş' },
     { href: '/search', icon: Search, label: 'Ara' },
-    { href: '/products', icon: Package, label: 'Ürünler' },
-    { href: '/locations', icon: LayoutGrid, label: 'Yerleşim' },
+    { href: '/products', icon: Package, label: 'Ürün' },
+    { href: '/reports', icon: FileText, label: 'Rapor' },
 ]
 
 export function MobileNav() {
@@ -36,8 +36,8 @@ export function MobileNav() {
                             key={item.href}
                             href={item.href}
                             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${isActive
-                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                                 }`}
                         >
                             <Icon className="w-5 h-5" />

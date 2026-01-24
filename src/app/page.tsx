@@ -26,7 +26,8 @@ import {
   RefreshCw,
   Building2,
   LayoutGrid,
-  History
+  History,
+  FileText
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
@@ -288,6 +289,20 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-semibold text-white">Hareketler</p>
                   <p className="text-xs text-slate-400">Giriş/Çıkış log</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/reports">
+            <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer group">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Raporlar</p>
+                  <p className="text-xs text-slate-400">PDF indir</p>
                 </div>
               </CardContent>
             </Card>
