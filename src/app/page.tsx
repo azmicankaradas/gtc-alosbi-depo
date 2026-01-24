@@ -206,7 +206,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Link href="/stock/entry">
             <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer group">
               <CardContent className="p-4 flex items-center gap-3">
@@ -244,6 +244,20 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-semibold text-white">Stok Çıkışı</p>
                   <p className="text-xs text-slate-400">Ürün çıkar</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/products">
+            <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20 hover:border-cyan-500/40 transition-all cursor-pointer group">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Package className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Ürünler</p>
+                  <p className="text-xs text-slate-400">Ürün yönetimi</p>
                 </div>
               </CardContent>
             </Card>
