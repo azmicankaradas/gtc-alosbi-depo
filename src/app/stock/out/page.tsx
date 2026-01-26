@@ -124,7 +124,7 @@ export default function StockOutPage() {
             const documentCode = generateDocumentCode()
             const transactionDate = new Date().toLocaleDateString('tr-TR')
 
-            // 1. Update stock quantity
+            // 1. Update stock quantity (this triggers automatic movement record creation)
             const { error: stockError } = await supabase
                 .from('stock')
                 .update({ quantity: newQuantity })
@@ -132,21 +132,19 @@ export default function StockOutPage() {
 
             if (stockError) throw stockError
 
-            // 2. Insert stock movement record with requester info
+            // 2. Update the movement record created by the trigger to add requester info
+            // Find the most recent movement for this stock
             const { error: movementError } = await supabase
                 .from('stock_movements')
-                .insert({
-                    stock_id: selectedStock.stock_id,
-                    variant_id: selectedStock.variant_id,
-                    location_id: selectedStock.location_id,
-                    movement_type: 'out',
-                    quantity: qty,
-                    previous_quantity: selectedStock.quantity,
-                    new_quantity: newQuantity,
+                .update({
                     requester_name: requesterName,
                     document_code: documentCode,
                     notes: `Talep eden: ${requesterName}`
                 })
+                .eq('stock_id', selectedStock.stock_id)
+                .eq('new_quantity', newQuantity)
+                .order('created_at', { ascending: false })
+                .limit(1)
 
             if (movementError) throw movementError
 
