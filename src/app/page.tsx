@@ -238,7 +238,7 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/stock/output">
+          <Link href="/stock/out">
             <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20 hover:border-orange-500/40 transition-all cursor-pointer group">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">

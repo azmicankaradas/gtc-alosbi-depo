@@ -71,6 +71,8 @@ export interface StockMovement {
     new_quantity: number
     notes: string | null
     user_id: string | null
+    requester_name: string | null
+    document_code: string | null
     created_at: string
 }
 
@@ -150,3 +152,12 @@ export const COLOR_NAMES: Record<ColorType, string> = {
 
 export const TEXTILE_SIZES = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']
 export const SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47']
+
+// Requester options for Stock Out
+export const REQUESTER_OPTIONS = [
+    'Bahar Pekderin',
+    'Esra Şahin',
+    'Gülcan Ağırman',
+    'Osman Çobalak'
+] as const
+
