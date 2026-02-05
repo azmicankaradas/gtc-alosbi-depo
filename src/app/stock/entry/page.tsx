@@ -2,9 +2,8 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +22,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Product, Variant, Location, ProductGroup, TextileCategory, FabricType, ColorType } from '@/types/database'
-import { TEXTILE_CATEGORY_NAMES, FABRIC_NAMES, COLOR_NAMES, TEXTILE_SIZES, SHOE_SIZES } from '@/types/database'
+import { TEXTILE_CATEGORY_NAMES, FABRIC_NAMES, COLOR_NAMES, TEXTILE_SIZES } from '@/types/database'
 
 export default function StockEntryPage() {
     const [products, setProducts] = useState<Product[]>([])
@@ -46,11 +45,12 @@ export default function StockEntryPage() {
     const [selectedProduct, setSelectedProduct] = useState('')
     const [selectedVariant, setSelectedVariant] = useState('')
 
-    // Common
-    const [selectedLocation, setSelectedLocation] = useState('')
+    // Common - Kademeli konum seçimi
+    const [selectedShelf, setSelectedShelf] = useState<number | ''>('')
+    const [selectedColumn, setSelectedColumn] = useState('')
+    const [selectedCell, setSelectedCell] = useState<number | ''>('')
     const [quantity, setQuantity] = useState('')
 
-    const router = useRouter()
     const supabase = createClient()
 
     // Fetch initial data
@@ -79,12 +79,18 @@ export default function StockEntryPage() {
         p.product_group === 'shoes'
     )
 
-    // Find matching textile product based on filters
+    // Find matching textile product based on filters (products have color in name)
+    const getColorNameForSearch = (color: ColorType | ''): string => {
+        if (color === 'yesil') return 'yeşil'
+        if (color === 'turuncu') return 'turuncu'
+        return ''
+    }
+
     const matchingTextileProduct = products.find(p =>
         p.product_group === 'textile' &&
         p.fabric === selectedFabric &&
         p.category === selectedCategory &&
-        p.name.toLowerCase().includes(selectedColor === 'yesil' ? 'yeşil' : selectedColor === 'turuncu' ? 'turuncu' : '')
+        (selectedColor ? p.name.toLowerCase().includes(getColorNameForSearch(selectedColor)) : true)
     )
 
     // Fetch variants when product changes (for shoes) or when textile filters are complete
@@ -96,26 +102,29 @@ export default function StockEntryPage() {
                 productId = selectedProduct
             } else if (selectedProductGroup === 'textile' && matchingTextileProduct) {
                 productId = matchingTextileProduct.id
+                console.log('Fetching variants for textile product:', matchingTextileProduct.name, matchingTextileProduct.id)
             }
 
             if (!productId) {
+                console.log('No product ID, clearing variants')
                 setVariants([])
                 return
             }
 
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('variants')
                 .select('*')
                 .eq('product_id', productId)
                 .eq('is_active', true)
                 .order('size')
 
+            console.log('Variants fetched:', data?.length || 0, error?.message || 'no error')
             setVariants(data || [])
         }
 
         fetchVariants()
         setSelectedVariant('')
-    }, [selectedProduct, matchingTextileProduct, selectedProductGroup, supabase])
+    }, [selectedProduct, matchingTextileProduct?.id, selectedProductGroup, supabase])
 
     // Filter locations based on product group (Floor restriction)
     useEffect(() => {
@@ -126,8 +135,32 @@ export default function StockEntryPage() {
 
         const targetFloor = selectedProductGroup === 'textile' ? 'floor_0' : 'floor_1'
         setFilteredLocations(locations.filter(l => l.floor === targetFloor))
-        setSelectedLocation('')
+        setSelectedShelf('')
+        setSelectedColumn('')
+        setSelectedCell('')
     }, [selectedProductGroup, locations])
+
+    // Get unique shelves from filtered locations
+    const availableShelves = [...new Set(filteredLocations.map(l => l.shelf))].sort((a, b) => a - b)
+
+    // Get columns for selected shelf (F only for shelf 6)
+    const getColumnsForShelf = (shelf: number): string[] => {
+        if (shelf === 6) {
+            return ['A', 'B', 'C', 'D', 'E', 'F']
+        }
+        return ['A', 'B', 'C', 'D', 'E']
+    }
+
+    // Get available columns based on selected shelf
+    const availableColumns = selectedShelf ? getColumnsForShelf(selectedShelf) : []
+
+    // Get available cells (always 1, 2, 3)
+    const availableCells = [1, 2, 3]
+
+    // Find the actual location based on selections
+    const selectedLocation = filteredLocations.find(
+        l => l.shelf === selectedShelf && l.column_label === selectedColumn && l.cell === selectedCell
+    )
 
     // Handle product group change
     const handleProductGroupChange = (value: ProductGroup) => {
@@ -139,14 +172,11 @@ export default function StockEntryPage() {
         setSelectedSize('')
         setSelectedProduct('')
         setSelectedVariant('')
-        setSelectedLocation('')
+        setSelectedShelf('')
+        setSelectedColumn('')
+        setSelectedCell('')
         setQuantity('')
     }
-
-    // Get filtered variants by size for textile
-    const filteredVariantsBySize = selectedSize
-        ? variants.filter(v => v.size === selectedSize)
-        : variants
 
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
@@ -157,18 +187,48 @@ export default function StockEntryPage() {
         if (selectedProductGroup === 'shoes') {
             variantId = selectedVariant
         } else if (selectedProductGroup === 'textile') {
-            // Find variant matching size and color
-            const matchingVariant = variants.find(v =>
-                v.size === selectedSize &&
-                v.color === selectedColor
+            console.log('Textile matching:', {
+                variants: variants.length,
+                selectedSize,
+                selectedColor,
+                matchingTextileProduct: matchingTextileProduct?.name
+            })
+
+            // Find variant matching size and color, or just size if color doesn't match
+            let matchingVariant = variants.find(v =>
+                v.size === selectedSize && v.color === selectedColor
             )
+            // Fallback: try matching by size only if no color match
+            if (!matchingVariant) {
+                matchingVariant = variants.find(v => v.size === selectedSize)
+            }
             if (matchingVariant) {
                 variantId = matchingVariant.id
             }
         }
 
-        if (!variantId || !selectedLocation || !quantity) {
-            toast.error('Lütfen tüm alanları doldurun')
+        // Better validation with specific error messages
+        if (!variantId) {
+            console.log('Variant not found:', { variantsCount: variants.length, selectedSize })
+            toast.error('Ürün varyantı bulunamadı', {
+                description: variants.length === 0
+                    ? 'Bu ürün için varyant tanımlı değil'
+                    : `${selectedSize} bedeni için varyant bulunamadı`
+            })
+            return
+        }
+
+        if (!selectedLocation?.id) {
+            toast.error('Konum seçilmedi', {
+                description: 'Lütfen raf, bölüm ve hücre seçin'
+            })
+            return
+        }
+
+        if (!quantity) {
+            toast.error('Miktar girilmedi', {
+                description: 'Lütfen adet giriniz'
+            })
             return
         }
 
@@ -186,8 +246,8 @@ export default function StockEntryPage() {
                 .from('stock')
                 .select('id, quantity')
                 .eq('variant_id', variantId)
-                .eq('location_id', selectedLocation)
-                .single()
+                .eq('location_id', selectedLocation.id)
+                .maybeSingle()
 
             if (existingStock) {
                 // Update existing stock
@@ -207,7 +267,7 @@ export default function StockEntryPage() {
                     .from('stock')
                     .insert({
                         variant_id: variantId,
-                        location_id: selectedLocation,
+                        location_id: selectedLocation.id,
                         quantity: qty
                     })
 
@@ -218,10 +278,11 @@ export default function StockEntryPage() {
                 })
             }
 
-            // Reset form
             setSelectedVariant('')
             setSelectedSize('')
-            setSelectedLocation('')
+            setSelectedShelf('')
+            setSelectedColumn('')
+            setSelectedCell('')
             setQuantity('')
 
         } catch (error: any) {
@@ -245,8 +306,6 @@ export default function StockEntryPage() {
 
     // Check if shoes form is complete
     const isShoesFormComplete = selectedProduct && selectedVariant && selectedLocation && quantity
-
-    const selectedLocationData = locations.find(l => l.id === selectedLocation)
 
     if (isLoading) {
         return (
@@ -480,40 +539,107 @@ export default function StockEntryPage() {
                             <CardHeader>
                                 <CardTitle className="text-white flex items-center gap-2">
                                     <MapPin className="w-5 h-5 text-blue-400" />
-                                    Konum
+                                    Konum Seçimi
                                 </CardTitle>
                                 <CardDescription className="text-slate-400">
-                                    {selectedProductGroup === 'textile' ? 'Zemin Kat (K0)' : '1. Kat (K1)'} konumları
+                                    {selectedProductGroup === 'textile' ? 'Zemin Kat (K0)' : '1. Kat (K1)'} - Raf, bölüm ve hücre seçin
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
+                                {/* Raf Seçimi */}
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300">Raf Konumu</Label>
-                                    <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                                    <Label className="text-slate-300">1. Raf</Label>
+                                    <Select
+                                        value={selectedShelf ? selectedShelf.toString() : ''}
+                                        onValueChange={(v) => {
+                                            setSelectedShelf(parseInt(v))
+                                            setSelectedColumn('')
+                                            setSelectedCell('')
+                                        }}
+                                    >
                                         <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
-                                            <SelectValue placeholder="Konum seçin..." />
+                                            <SelectValue placeholder="Raf seçin..." />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-800 border-slate-700 max-h-60">
-                                            {filteredLocations.map(location => (
-                                                <SelectItem key={location.id} value={location.id} className="text-white hover:bg-slate-700">
-                                                    {getLocationDisplay(location)} - Raf {location.shelf} / {location.column_label}{location.cell}
+                                        <SelectContent className="bg-slate-800 border-slate-700">
+                                            {availableShelves.map(shelf => (
+                                                <SelectItem key={shelf} value={shelf.toString()} className="text-white hover:bg-slate-700">
+                                                    Raf {shelf}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label className="text-slate-300">Miktar</Label>
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(e.target.value)}
-                                        placeholder="Adet giriniz..."
-                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                                    />
-                                </div>
+                                {/* Bölüm Seçimi */}
+                                {selectedShelf && (
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-300">2. Bölüm (Kolon)</Label>
+                                        <Select
+                                            value={selectedColumn}
+                                            onValueChange={(v) => {
+                                                setSelectedColumn(v)
+                                                setSelectedCell('')
+                                            }}
+                                        >
+                                            <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                                                <SelectValue placeholder="Bölüm seçin..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-slate-800 border-slate-700">
+                                                {availableColumns.map(col => (
+                                                    <SelectItem key={col} value={col} className="text-white hover:bg-slate-700">
+                                                        {col} Bölümü
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {/* Hücre Seçimi */}
+                                {selectedColumn && (
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-300">3. Hücre</Label>
+                                        <Select
+                                            value={selectedCell ? selectedCell.toString() : ''}
+                                            onValueChange={(v) => setSelectedCell(parseInt(v))}
+                                        >
+                                            <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                                                <SelectValue placeholder="Hücre seçin..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-slate-800 border-slate-700">
+                                                {availableCells.map(cell => (
+                                                    <SelectItem key={cell} value={cell.toString()} className="text-white hover:bg-slate-700">
+                                                        Hücre {cell}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {/* Seçilen Konum Özeti */}
+                                {selectedLocation && (
+                                    <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                        <p className="text-sm text-blue-400 font-medium">Seçilen Konum:</p>
+                                        <p className="text-white">{getLocationDisplay(selectedLocation)}</p>
+                                    </div>
+                                )}
+
+                                {/* Miktar */}
+                                {selectedLocation && (
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-300">4. Miktar</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={quantity}
+                                            onChange={(e) => setQuantity(e.target.value)}
+                                            onWheel={(e) => e.currentTarget.blur()}
+                                            placeholder="Adet giriniz..."
+                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                                        />
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     )}
@@ -562,7 +688,7 @@ export default function StockEntryPage() {
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-400">Konum:</span>
                                         <span className="text-white font-medium">
-                                            {selectedLocationData ? getLocationDisplay(selectedLocationData) : ''}
+                                            {selectedLocation ? getLocationDisplay(selectedLocation) : ''}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-sm">

@@ -27,7 +27,9 @@ import {
   Building2,
   LayoutGrid,
   History,
-  FileText
+  FileText,
+  Users,
+  ShieldCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
@@ -50,8 +52,32 @@ export default function DashboardPage() {
   const [lowStockItems, setLowStockItems] = useState<StockFullView[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Hardcoded admin email as fallback
+  const ADMIN_EMAIL = 'azmicankaradas96@gmail.com'
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Check profile first
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        // If profile says admin OR email matches hardcoded admin
+        const isAdminUser = profile?.role === 'admin' || user.email === ADMIN_EMAIL
+        setIsAdmin(isAdminUser)
+      }
+    }
+    checkAdmin()
+  }, [supabase])
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -74,25 +100,31 @@ export default function DashboardPage() {
 
       const totalStock = stockData?.reduce((sum, item) => sum + item.quantity, 0) || 0
 
-      // Fetch low stock count
+      // Fetch low stock count using the view's low_stock calculation
+      // (textile: quantity > 0 AND quantity < 60, shoes: quantity > 0 AND quantity < 30)
       const { data: lowStockData } = await supabase
-        .from('stock')
-        .select('quantity, min_quantity')
+        .from('stock_full_view')
+        .select('low_stock')
+        .eq('low_stock', true)
 
-      const lowStockCount = lowStockData?.filter(item => item.quantity <= item.min_quantity).length || 0
+      const lowStockCount = lowStockData?.length || 0
 
-      // Fetch textile vs shoes product counts
-      const { count: textileCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
+      // Fetch textile vs shoes stock quantities (actual stock, not product count)
+      const { data: textileStockData } = await supabase
+        .from('stock_full_view')
+        .select('quantity')
         .eq('product_group', 'textile')
 
-      const { count: shoesCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
+      const textileStockTotal = textileStockData?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0
+
+      const { data: shoesStockData } = await supabase
+        .from('stock_full_view')
+        .select('quantity')
         .eq('product_group', 'shoes')
 
-      // Fetch locations stats
+      const shoesStockTotal = shoesStockData?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0
+
+      // Fetch locations stats - only count locations with actual stock (quantity > 0)
       const { count: totalLocations } = await supabase
         .from('locations')
         .select('*', { count: 'exact', head: true })
@@ -100,6 +132,7 @@ export default function DashboardPage() {
       const { data: filledLocations } = await supabase
         .from('stock')
         .select('location_id')
+        .gt('quantity', 0)
 
       const uniqueFilledLocations = new Set(filledLocations?.map(s => s.location_id) || [])
 
@@ -108,8 +141,8 @@ export default function DashboardPage() {
         totalVariants: variantCount || 0,
         totalStock,
         lowStockCount,
-        textileCount: textileCount || 0,
-        shoesCount: shoesCount || 0,
+        textileCount: textileStockTotal,
+        shoesCount: shoesStockTotal,
         locationsFilled: uniqueFilledLocations.size,
         totalLocations: totalLocations || 180
       })
@@ -184,6 +217,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Link href="/admin">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 sm:w-auto sm:px-4"
+                  >
+                    <ShieldCheck className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Admin Panel</span>
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -209,16 +254,16 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           <Link href="/stock/entry">
             <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Plus className="w-5 h-5 text-emerald-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Stok Girişi</p>
-                  <p className="text-xs text-slate-400">Yeni ürün ekle</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Stok Girişi</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Yeni ürün ekle</p>
                 </div>
               </CardContent>
             </Card>
@@ -226,13 +271,13 @@ export default function DashboardPage() {
 
           <Link href="/search">
             <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Search className="w-5 h-5 text-blue-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Stok Ara</p>
-                  <p className="text-xs text-slate-400">Ürün bul</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Stok Ara</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Ürün bul</p>
                 </div>
               </CardContent>
             </Card>
@@ -240,13 +285,13 @@ export default function DashboardPage() {
 
           <Link href="/stock/out">
             <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20 hover:border-orange-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <TrendingDown className="w-5 h-5 text-orange-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Stok Çıkışı</p>
-                  <p className="text-xs text-slate-400">Ürün çıkar</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Stok Çıkışı</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Ürün çıkar</p>
                 </div>
               </CardContent>
             </Card>
@@ -254,13 +299,13 @@ export default function DashboardPage() {
 
           <Link href="/products">
             <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20 hover:border-cyan-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Package className="w-5 h-5 text-cyan-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Ürünler</p>
-                  <p className="text-xs text-slate-400">Ürün yönetimi</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Ürünler</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Ürün yönetimi</p>
                 </div>
               </CardContent>
             </Card>
@@ -268,13 +313,13 @@ export default function DashboardPage() {
 
           <Link href="/locations">
             <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <LayoutGrid className="w-5 h-5 text-purple-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Yerleşim</p>
-                  <p className="text-xs text-slate-400">Raf görünümü</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Yerleşim</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Raf görünümü</p>
                 </div>
               </CardContent>
             </Card>
@@ -282,13 +327,13 @@ export default function DashboardPage() {
 
           <Link href="/movements">
             <Card className="bg-gradient-to-br from-pink-500/10 to-pink-600/5 border-pink-500/20 hover:border-pink-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-pink-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <History className="w-5 h-5 text-pink-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <History className="w-4 h-4 sm:w-5 sm:h-5 text-pink-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Hareketler</p>
-                  <p className="text-xs text-slate-400">Giriş/Çıkış log</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Hareketler</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Giriş/Çıkış log</p>
                 </div>
               </CardContent>
             </Card>
@@ -296,17 +341,33 @@ export default function DashboardPage() {
 
           <Link href="/reports">
             <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileText className="w-5 h-5 text-amber-400" />
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Raporlar</p>
-                  <p className="text-xs text-slate-400">PDF indir</p>
+                  <p className="font-semibold text-white text-sm sm:text-base">Raporlar</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">PDF indir</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
+
+          {isAdmin && (
+            <Link href="/admin/users">
+              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer group">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm sm:text-base">Kullanıcılar</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Admin paneli</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
 
         {/* Stats Cards */}

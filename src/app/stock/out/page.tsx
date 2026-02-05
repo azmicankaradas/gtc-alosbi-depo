@@ -465,11 +465,17 @@ export default function StockOutPage() {
                             <div className="space-y-2">
                                 <Label className="text-slate-300">Çıkış Miktarı</Label>
                                 <Input
-                                    type="number"
-                                    min="1"
-                                    max={selectedStock.quantity}
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     value={outputQuantity}
-                                    onChange={(e) => setOutputQuantity(e.target.value)}
+                                    onChange={(e) => {
+                                        const value = e.target.value
+                                        // Only allow numeric input
+                                        if (value === '' || /^\d+$/.test(value)) {
+                                            setOutputQuantity(value)
+                                        }
+                                    }}
                                     placeholder="Kaç adet çıkış yapılacak?"
                                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                                 />

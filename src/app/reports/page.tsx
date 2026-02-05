@@ -75,23 +75,43 @@ export default function ReportsPage() {
             const now = new Date()
             const dateStr = now.toLocaleDateString('tr-TR')
             const timeStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+            const pageWidth = doc.internal.pageSize.getWidth()
+            const margin = 15
 
-            // Header
-            doc.setFontSize(20)
-            doc.setTextColor(16, 185, 129) // Emerald color
-            doc.text('GTC Endustriyel', 14, 20)
+            // ============================================================
+            // HEADER SECTION - Logo and Title (matching Stok Transfer Fisi format)
+            // ============================================================
 
-            doc.setFontSize(12)
-            doc.setTextColor(100)
-            doc.text('Alosbi Depo Stok Raporu', 14, 28)
+            // GTC Logo Text
+            doc.setFontSize(28)
+            doc.setTextColor(0, 128, 128) // Teal color
+            doc.setFont('helvetica', 'bold')
+            doc.text('GTC', margin, 20)
 
-            doc.setFontSize(10)
-            doc.setTextColor(150)
-            doc.text(`Tarih: ${dateStr} ${timeStr}`, 14, 35)
+            doc.setFontSize(16)
+            doc.setTextColor(0, 128, 128)
+            doc.text('Endustriyel', margin, 28)
 
-            // Report title
-            doc.setFontSize(14)
-            doc.setTextColor(0)
+            doc.setFontSize(7)
+            doc.setTextColor(100, 100, 100)
+            doc.setFont('helvetica', 'normal')
+            doc.text('GTC Endustriyel Urunler San. ve Tic. A.S.', margin, 33)
+
+            // Main Title - Stok Raporu
+            doc.setFontSize(18)
+            doc.setTextColor(0, 128, 128)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Stok Raporu', pageWidth / 2, 18, { align: 'center' })
+
+            // ============================================================
+            // INFO SECTION
+            // ============================================================
+
+            const infoStartY = 45
+            const labelWidth = 30
+            const lineHeight = 6
+
+            // Report type titles
             const reportTitles: Record<ReportType, string> = {
                 'all_stock': 'Tum Stok Listesi',
                 'low_stock': 'Dusuk Stok Raporu',
@@ -99,18 +119,53 @@ export default function ReportsPage() {
                 'shoes': 'Ayakkabi Urunleri',
                 'by_location': 'Konuma Gore Stok'
             }
-            doc.text(reportTitles[reportType], 14, 45)
 
-            // Summary
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(51, 51, 51)
+
+            // Left Column
+            doc.text('Rapor Turu', margin, infoStartY)
+            doc.text('Depo', margin, infoStartY + lineHeight)
+            doc.text('Olusturma', margin, infoStartY + lineHeight * 2)
+
+            doc.setFont('helvetica', 'normal')
+            doc.text(':', margin + labelWidth, infoStartY)
+            doc.text(':', margin + labelWidth, infoStartY + lineHeight)
+            doc.text(':', margin + labelWidth, infoStartY + lineHeight * 2)
+
+            doc.text(reportTitles[reportType], margin + labelWidth + 3, infoStartY)
+            doc.text('ALIOSB', margin + labelWidth + 3, infoStartY + lineHeight)
+            doc.text(`${dateStr} ${timeStr}`, margin + labelWidth + 3, infoStartY + lineHeight * 2)
+
+            // Right Column - Summary
+            const rightColX = pageWidth - margin - 60
             const totalItems = filteredData.length
             const totalQuantity = filteredData.reduce((sum, s) => sum + s.quantity, 0)
             const lowStockCount = filteredData.filter(s => s.low_stock).length
 
-            doc.setFontSize(10)
-            doc.setTextColor(100)
-            doc.text(`Toplam Kayit: ${totalItems} | Toplam Adet: ${totalQuantity} | Dusuk Stok: ${lowStockCount}`, 14, 52)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Toplam Kayit', rightColX, infoStartY)
+            doc.text('Toplam Adet', rightColX, infoStartY + lineHeight)
+            doc.text('Dusuk Stok', rightColX, infoStartY + lineHeight * 2)
 
-            // Table data
+            doc.setFont('helvetica', 'normal')
+            doc.text(':', rightColX + 28, infoStartY)
+            doc.text(':', rightColX + 28, infoStartY + lineHeight)
+            doc.text(':', rightColX + 28, infoStartY + lineHeight * 2)
+
+            doc.text(totalItems.toString(), rightColX + 32, infoStartY)
+            doc.text(totalQuantity.toString(), rightColX + 32, infoStartY + lineHeight)
+            doc.setTextColor(lowStockCount > 0 ? 220 : 51, lowStockCount > 0 ? 38 : 51, lowStockCount > 0 ? 38 : 51)
+            doc.text(lowStockCount.toString(), rightColX + 32, infoStartY + lineHeight * 2)
+
+            // ============================================================
+            // TABLE SECTION
+            // ============================================================
+
+            const tableStartY = infoStartY + lineHeight * 4
+            doc.setTextColor(51, 51, 51)
+
             let tableData: (string | number)[][] = []
 
             if (reportType === 'by_location') {
@@ -134,20 +189,54 @@ export default function ReportsPage() {
                 )
 
                 autoTable(doc, {
-                    startY: 58,
-                    head: [['Konum', 'Urun', 'SKU', 'Beden', 'Adet', 'Durum']],
+                    startY: tableStartY,
+                    head: [['Konum', 'Urun Adi', 'Stok Kodu', 'Beden', 'Miktar', 'Durum']],
                     body: tableData,
-                    theme: 'striped',
+                    theme: 'plain',
                     headStyles: {
-                        fillColor: [16, 185, 129],
-                        textColor: [255, 255, 255]
+                        fillColor: [255, 255, 255],
+                        textColor: [51, 51, 51],
+                        fontStyle: 'bold',
+                        fontSize: 8,
+                        halign: 'left',
+                        cellPadding: { top: 3, right: 2, bottom: 3, left: 2 }
                     },
-                    alternateRowStyles: { fillColor: [245, 245, 245] },
-                    styles: { fontSize: 8, cellPadding: 2 },
+                    bodyStyles: {
+                        textColor: [51, 51, 51],
+                        fontSize: 8,
+                        halign: 'left',
+                        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 }
+                    },
                     columnStyles: {
-                        0: { fontStyle: 'bold' },
-                        4: { halign: 'center' },
-                        5: { halign: 'center' }
+                        0: { fontStyle: 'bold', cellWidth: 25 },
+                        1: { cellWidth: 55 },
+                        2: { cellWidth: 30 },
+                        3: { cellWidth: 20, halign: 'center' },
+                        4: { cellWidth: 18, halign: 'right' },
+                        5: { cellWidth: 20, halign: 'center' }
+                    },
+                    margin: { left: margin, right: margin },
+                    didDrawPage: (data) => {
+                        const headerY = data.table?.head?.[0]?.cells?.[0]?.y
+                        if (headerY) {
+                            doc.setDrawColor(200, 200, 200)
+                            doc.setLineWidth(0.3)
+                            doc.line(margin, headerY + 6, pageWidth - margin, headerY + 6)
+                        }
+                    },
+                    didDrawCell: (data) => {
+                        if (data.section === 'body') {
+                            doc.setDrawColor(230, 230, 230)
+                            doc.setLineWidth(0.2)
+                            const y = data.cell.y + data.cell.height
+                            doc.line(margin, y, pageWidth - margin, y)
+                        }
+                    },
+                    didParseCell: (data) => {
+                        if (data.column.index === 5 && data.cell.raw === 'DUSUK') {
+                            data.cell.styles.textColor = [220, 38, 38]
+                            data.cell.styles.fontStyle = 'bold'
+                        }
                     }
                 })
             } else {
@@ -162,25 +251,53 @@ export default function ReportsPage() {
                 ])
 
                 autoTable(doc, {
-                    startY: 58,
-                    head: [['Urun Adi', 'SKU', 'Beden', 'Konum', 'Adet', 'Min', 'Durum']],
+                    startY: tableStartY,
+                    head: [['Urun Adi', 'Stok Kodu', 'Beden', 'Konum', 'Miktar', 'Min', 'Durum']],
                     body: tableData,
-                    theme: 'striped',
+                    theme: 'plain',
                     headStyles: {
-                        fillColor: [16, 185, 129],
-                        textColor: [255, 255, 255]
+                        fillColor: [255, 255, 255],
+                        textColor: [51, 51, 51],
+                        fontStyle: 'bold',
+                        fontSize: 8,
+                        halign: 'left',
+                        cellPadding: { top: 3, right: 2, bottom: 3, left: 2 }
                     },
-                    alternateRowStyles: { fillColor: [245, 245, 245] },
-                    styles: { fontSize: 8, cellPadding: 2 },
+                    bodyStyles: {
+                        textColor: [51, 51, 51],
+                        fontSize: 8,
+                        halign: 'left',
+                        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 }
+                    },
                     columnStyles: {
-                        4: { halign: 'center' },
-                        5: { halign: 'center' },
-                        6: { halign: 'center' }
+                        0: { cellWidth: 50 },
+                        1: { cellWidth: 28 },
+                        2: { cellWidth: 18, halign: 'center' },
+                        3: { cellWidth: 25 },
+                        4: { cellWidth: 15, halign: 'right' },
+                        5: { cellWidth: 12, halign: 'right' },
+                        6: { cellWidth: 18, halign: 'center' }
+                    },
+                    margin: { left: margin, right: margin },
+                    didDrawPage: (data) => {
+                        const headerY = data.table?.head?.[0]?.cells?.[0]?.y
+                        if (headerY) {
+                            doc.setDrawColor(200, 200, 200)
+                            doc.setLineWidth(0.3)
+                            doc.line(margin, headerY + 6, pageWidth - margin, headerY + 6)
+                        }
+                    },
+                    didDrawCell: (data) => {
+                        if (data.section === 'body') {
+                            doc.setDrawColor(230, 230, 230)
+                            doc.setLineWidth(0.2)
+                            const y = data.cell.y + data.cell.height
+                            doc.line(margin, y, pageWidth - margin, y)
+                        }
                     },
                     didParseCell: (data) => {
-                        // Highlight low stock cells
-                        if (data.column.index === 6 && data.cell.raw === 'DUSUK') {
-                            data.cell.styles.textColor = [239, 68, 68]
+                        if (data.column.index === 6 && data.cell.raw === 'DÜSÜK') {
+                            data.cell.styles.textColor = [220, 38, 38]
                             data.cell.styles.fontStyle = 'bold'
                         }
                     }
@@ -191,11 +308,11 @@ export default function ReportsPage() {
             const pageCount = doc.getNumberOfPages()
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i)
-                doc.setFontSize(8)
-                doc.setTextColor(150)
+                doc.setFontSize(7)
+                doc.setTextColor(128, 128, 128)
                 doc.text(
-                    `Sayfa ${i} / ${pageCount} - GTC Endustriyel Alosbi Depo`,
-                    doc.internal.pageSize.width / 2,
+                    `Sayfa ${i} / ${pageCount} - GTC Endüstriyel Depo Yönetim Sistemi`,
+                    pageWidth / 2,
                     doc.internal.pageSize.height - 10,
                     { align: 'center' }
                 )
@@ -205,12 +322,12 @@ export default function ReportsPage() {
             const fileName = `stok_raporu_${reportType}_${dateStr.replace(/\./g, '-')}.pdf`
             doc.save(fileName)
 
-            toast.success('PDF Raporu Oluşturuldu', {
+            toast.success('PDF Raporu Olusturuldu', {
                 description: fileName
             })
         } catch (error) {
             console.error('PDF generation error:', error)
-            toast.error('PDF oluşturulurken hata oluştu')
+            toast.error('PDF olusturulurken hata olustu')
         } finally {
             setIsGenerating(false)
         }
@@ -273,8 +390,8 @@ export default function ReportsPage() {
                                     key={option.value}
                                     onClick={() => setReportType(option.value as ReportType)}
                                     className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${isSelected
-                                            ? 'border-emerald-500 bg-emerald-500/10'
-                                            : 'border-slate-600 hover:border-slate-500 bg-slate-700/30'
+                                        ? 'border-emerald-500 bg-emerald-500/10'
+                                        : 'border-slate-600 hover:border-slate-500 bg-slate-700/30'
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">

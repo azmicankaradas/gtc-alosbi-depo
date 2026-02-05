@@ -54,9 +54,10 @@ export default function LocationsPage() {
                 const stock = (stockRes as StockFullView[]) || []
                 setStockData(stock)
 
-                // Merge locations with stock info
+                // Merge locations with stock info (filter out zero quantity stocks)
                 const locationsWithStock: LocationWithStock[] = (locData || []).map(loc => {
-                    const locStock = stock.filter(s => s.location_id === loc.id)
+                    // Only include stocks with quantity > 0
+                    const locStock = stock.filter(s => s.location_id === loc.id && s.quantity > 0)
                     return {
                         ...loc,
                         stock_count: locStock.length,
@@ -93,7 +94,13 @@ export default function LocationsPage() {
         return 'bg-emerald-500/20 border-emerald-500/50 hover:bg-emerald-500/30'
     }
 
-    const columns: ('A' | 'B' | 'C' | 'D' | 'E')[] = ['A', 'B', 'C', 'D', 'E']
+    // Raf 6 için F kolonu da var
+    const getColumnsForShelf = (shelf: number): ('A' | 'B' | 'C' | 'D' | 'E' | 'F')[] => {
+        if (shelf === 6) {
+            return ['A', 'B', 'C', 'D', 'E', 'F']
+        }
+        return ['A', 'B', 'C', 'D', 'E']
+    }
     const cells = [1, 2, 3]
 
     if (isLoading) {
@@ -166,7 +173,7 @@ export default function LocationsPage() {
                                 key={`f0-s${shelf}`}
                                 shelf={shelf}
                                 locations={getShelfLocations('floor_0', shelf)}
-                                columns={columns}
+                                columns={getColumnsForShelf(shelf)}
                                 cells={cells}
                                 getCellStyle={getCellStyle}
                                 onCellClick={setSelectedLocation}
@@ -182,7 +189,7 @@ export default function LocationsPage() {
                                 key={`f1-s${shelf}`}
                                 shelf={shelf}
                                 locations={getShelfLocations('floor_1', shelf)}
-                                columns={columns}
+                                columns={getColumnsForShelf(shelf)}
                                 cells={cells}
                                 getCellStyle={getCellStyle}
                                 onCellClick={setSelectedLocation}
@@ -278,7 +285,7 @@ export default function LocationsPage() {
 interface ShelfGridProps {
     shelf: number
     locations: LocationWithStock[]
-    columns: ('A' | 'B' | 'C' | 'D' | 'E')[]
+    columns: ('A' | 'B' | 'C' | 'D' | 'E' | 'F')[]
     cells: number[]
     getCellStyle: (loc: LocationWithStock) => string
     onCellClick: (loc: LocationWithStock) => void
@@ -323,18 +330,18 @@ function ShelfGrid({ shelf, locations, columns, cells, getCellStyle, onCellClick
                                         if (!loc) return <td key={col}></td>
 
                                         return (
-                                            <td key={col} className="p-1">
+                                            <td key={col} className="p-0.5 sm:p-1">
                                                 <button
                                                     onClick={() => onCellClick(loc)}
-                                                    className={`w-full aspect-square min-w-[50px] rounded-lg border-2 transition-all flex flex-col items-center justify-center ${getCellStyle(loc)}`}
+                                                    className={`w-full aspect-square min-w-[40px] sm:min-w-[50px] rounded-lg border-2 transition-all flex flex-col items-center justify-center ${getCellStyle(loc)}`}
                                                 >
                                                     {loc.total_quantity > 0 ? (
                                                         <>
-                                                            <span className="text-xs font-bold text-white">{loc.total_quantity}</span>
-                                                            <span className="text-[9px] text-slate-400">adet</span>
+                                                            <span className="text-[10px] sm:text-xs font-bold text-white">{loc.total_quantity}</span>
+                                                            <span className="text-[8px] sm:text-[9px] text-slate-400">adet</span>
                                                         </>
                                                     ) : (
-                                                        <span className="text-[10px] text-slate-500">boş</span>
+                                                        <span className="text-[8px] sm:text-[10px] text-slate-500">boş</span>
                                                     )}
                                                 </button>
                                             </td>

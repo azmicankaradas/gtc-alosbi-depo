@@ -5,7 +5,7 @@ export type ProductGroup = 'textile' | 'shoes'
 export type TextileCategory = 'tulum' | 'kaban' | 'gomlek' | 'pantolon'
 export type FabricType = 'nomex' | 'gtc'
 export type ColorType = 'yesil' | 'turuncu'
-export type ColumnLabel = 'A' | 'B' | 'C' | 'D' | 'E'
+export type ColumnLabel = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 export type MovementType = 'in' | 'out' | 'transfer' | 'adjustment'
 
 // Location Interface

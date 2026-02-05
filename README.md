@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GTC Endüstriyel - Alosbi Depo Yönetim Sistemi
 
-## Getting Started
+Modern ve kullanıcı dostu depo stok yönetim uygulaması. Tekstil ve ayakkabı ürünlerinin stok takibi, giriş/çıkış işlemleri ve raporlama özellikleri sunar.
 
-First, run the development server:
+## 🚀 Özellikler
+
+- **Dashboard** - Özet istatistikler ve grafikler
+- **Stok Girişi** - Depoya yeni ürün ekleme
+- **Stok Çıkışı** - Depodan ürün teslimi ve PDF fiş oluşturma
+- **Stok Arama** - Ürün, SKU, beden veya konum ile arama
+- **Ürün Yönetimi** - Tekstil ve ayakkabı ürünleri
+- **Yerleşim Görünümü** - Kat ve raf bazlı depo haritası
+- **Hareket Geçmişi** - Tüm stok hareketlerinin logu
+- **Raporlar** - PDF formatında stok raporları
+
+## 📋 Gereksinimler
+
+- Node.js 18+
+- npm veya yarn
+- Supabase hesabı
+
+## ⚙️ Kurulum
+
+### 1. Bağımlılıkları yükleyin
+
+```bash
+npm install
+```
+
+### 2. Environment değişkenlerini ayarlayın
+
+`.env.example` dosyasını `.env.local` olarak kopyalayın ve Supabase bilgilerinizi girin:
+
+```bash
+cp .env.example .env.local
+```
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 3. Veritabanını kurun
+
+Supabase SQL Editor'da `supabase/schema.sql` dosyasını çalıştırın. Bu:
+- Tüm tabloları oluşturur (locations, products, variants, stock, stock_movements)
+- 180 depo konumunu otomatik oluşturur
+- Örnek ürünleri ekler
+- RLS politikalarını etkinleştirir
+
+### 4. Uygulamayı başlatın
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Tarayıcınızda [http://localhost:3000](http://localhost:3000) adresine gidin.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏗️ Teknolojiler
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend:** Next.js 16, React 19, TypeScript
+- **Styling:** Tailwind CSS 4, shadcn/ui
+- **Backend:** Supabase (PostgreSQL + Auth)
+- **Diğer:** jsPDF, Recharts
 
-## Learn More
+## 📁 Proje Yapısı
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                 # Next.js App Router sayfaları
+│   ├── stock/          # Stok giriş/çıkış
+│   ├── search/         # Arama
+│   ├── products/       # Ürünler
+│   ├── locations/      # Yerleşim
+│   ├── movements/      # Hareketler
+│   └── reports/        # Raporlar
+├── components/         # UI bileşenleri
+├── lib/               # Yardımcı fonksiyonlar
+└── types/             # TypeScript tipleri
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔐 Kimlik Doğrulama
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Uygulama Supabase Auth kullanır. Giriş sayfası: `/login`
 
-## Deploy on Vercel
+## 📄 Lisans
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Bu proje GTC Endüstriyel için geliştirilmiştir.

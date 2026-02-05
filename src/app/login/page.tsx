@@ -39,6 +39,48 @@ export default function LoginPage() {
                 return
             }
 
+            // Check approval status after successful authentication
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const { data: profile, error: profileError } = await supabase
+                    .from('user_profiles')
+                    .select('is_approved, status')
+                    .eq('id', user.id)
+                    .single()
+
+                console.log('Profile query result:', { profile, profileError, userId: user.id })
+
+                // If we can't fetch profile (RLS or other issue), still allow login and let middleware handle it
+                if (profileError) {
+                    console.error('Profile query error:', profileError)
+                    // Continue to dashboard, middleware will handle the redirect
+                    toast.success('Giriş Başarılı', {
+                        description: 'Yönlendiriliyorsunuz...',
+                    })
+                    router.push('/')
+                    router.refresh()
+                    return
+                }
+
+                if (profile && (!profile.is_approved || profile.status === 'pending')) {
+                    toast.info('Onay Bekleniyor', {
+                        description: 'Hesabınız yönetici onayı bekliyor.',
+                    })
+                    router.push('/pending-approval')
+                    router.refresh()
+                    return
+                }
+
+                if (profile && profile.status === 'rejected') {
+                    toast.error('Erişim Reddedildi', {
+                        description: 'Hesabınız reddedilmiş.',
+                    })
+                    router.push('/access-denied')
+                    router.refresh()
+                    return
+                }
+            }
+
             toast.success('Giriş Başarılı', {
                 description: 'Yönlendiriliyorsunuz...',
             })
@@ -191,6 +233,12 @@ export default function LoginPage() {
 
                         <TabsContent value="register">
                             <form onSubmit={handleRegister} className="space-y-4 mt-4">
+                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                                    <p className="text-xs text-amber-200">
+                                        <strong>Not:</strong> Kayıt sonrası hesabınız yönetici onayına sunulacaktır.
+                                        Onay alana kadar sisteme erişim sağlayamazsınız.
+                                    </p>
+                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="reg-email" className="text-slate-300">E-posta</Label>
                                     <Input
