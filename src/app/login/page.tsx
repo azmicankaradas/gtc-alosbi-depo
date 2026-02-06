@@ -4,13 +4,14 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Warehouse, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
@@ -19,6 +20,8 @@ export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+    const [firstName, setFirstName] = useState('')
+    const [lastName, setLastName] = useState('')
     const router = useRouter()
     const supabase = createClient()
 
@@ -119,6 +122,11 @@ export default function LoginPage() {
             const { error } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    data: {
+                        full_name: `${firstName} ${lastName}`.trim()
+                    }
+                }
             })
 
             if (error) {
@@ -150,8 +158,15 @@ export default function LoginPage() {
 
             <Card className="w-full max-w-md relative bg-slate-800/50 backdrop-blur-xl border-slate-700/50 shadow-2xl">
                 <CardHeader className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                        <Warehouse className="w-8 h-8 text-white" />
+                    <div className="mx-auto">
+                        <Image
+                            src="/logo.png"
+                            alt="GTC Endüstriyel Ürünler"
+                            width={200}
+                            height={80}
+                            className="h-16 w-auto"
+                            priority
+                        />
                     </div>
                     <div>
                         <CardTitle className="text-2xl font-bold text-white">
@@ -238,6 +253,32 @@ export default function LoginPage() {
                                         <strong>Not:</strong> Kayıt sonrası hesabınız yönetici onayına sunulacaktır.
                                         Onay alana kadar sisteme erişim sağlayamazsınız.
                                     </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="firstName" className="text-slate-300">Ad</Label>
+                                        <Input
+                                            id="firstName"
+                                            type="text"
+                                            placeholder="Ahmet"
+                                            value={firstName}
+                                            onChange={(e) => setFirstName(e.target.value)}
+                                            required
+                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="lastName" className="text-slate-300">Soyad</Label>
+                                        <Input
+                                            id="lastName"
+                                            type="text"
+                                            placeholder="Yılmaz"
+                                            value={lastName}
+                                            onChange={(e) => setLastName(e.target.value)}
+                                            required
+                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="reg-email" className="text-slate-300">E-posta</Label>

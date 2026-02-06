@@ -6,13 +6,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
-  Warehouse,
   Package,
   Search,
   Plus,
@@ -29,7 +29,8 @@ import {
   History,
   FileText,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  User
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
@@ -53,6 +54,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -67,9 +69,12 @@ export default function DashboardPage() {
         // Check profile first
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('role')
+          .select('role, full_name')
           .eq('id', user.id)
           .single()
+
+        // Set user name
+        setUserName(profile?.full_name || user.email?.split('@')[0] || null)
 
         // If profile says admin OR email matches hardcoded admin
         const isAdminUser = profile?.role === 'admin' || user.email === ADMIN_EMAIL
@@ -207,16 +212,24 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <Warehouse className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">GTC Endüstriyel</h1>
-                <p className="text-xs text-slate-400">Alosbi Depo</p>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="GTC Endüstriyel Ürünler"
+                width={150}
+                height={60}
+                className="h-10 w-auto"
+                priority
+              />
             </div>
 
             <div className="flex items-center gap-2">
+              {/* User name display */}
+              {userName && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                  <User className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm text-slate-300">{userName}</span>
+                </div>
+              )}
               {isAdmin && (
                 <Link href="/admin">
                   <Button

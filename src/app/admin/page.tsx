@@ -62,10 +62,11 @@ export default function AdminDashboardPage() {
                     .select('*', { count: 'exact', head: true })
                     .eq('is_active', true)
 
-                // Stock stats
+                // Stock stats - only count items with quantity > 0
                 const { data: stockData } = await supabase
                     .from('stock')
                     .select('quantity, location_id')
+                    .gt('quantity', 0)
 
                 const totalStock = stockData?.reduce((sum, s) => sum + s.quantity, 0) || 0
                 const uniqueLocations = new Set(stockData?.map(s => s.location_id) || [])
