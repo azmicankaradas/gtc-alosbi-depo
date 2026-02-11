@@ -151,7 +151,7 @@ export default function DashboardPage() {
       const { data: recent } = await supabase
         .from('stock_full_view')
         .select('*')
-        .order('stock_id', { ascending: false })
+        .order('stock_updated_at', { ascending: false })
         .limit(5)
 
       setRecentStock((recent as StockFullView[]) || [])

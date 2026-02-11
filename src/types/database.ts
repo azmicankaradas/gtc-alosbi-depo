@@ -91,6 +91,8 @@ export interface StockFullView {
     stock_id: string
     quantity: number
     min_quantity: number
+    stock_created_at: string
+    stock_updated_at: string
     low_stock: boolean
     variant_id: string
     sku: string
