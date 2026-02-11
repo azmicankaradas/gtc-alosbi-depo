@@ -102,11 +102,9 @@ export default function StockEntryPage() {
                 productId = selectedProduct
             } else if (selectedProductGroup === 'textile' && matchingTextileProduct) {
                 productId = matchingTextileProduct.id
-                console.log('Fetching variants for textile product:', matchingTextileProduct.name, matchingTextileProduct.id)
             }
 
             if (!productId) {
-                console.log('No product ID, clearing variants')
                 setVariants([])
                 return
             }
@@ -118,7 +116,6 @@ export default function StockEntryPage() {
                 .eq('is_active', true)
                 .order('size')
 
-            console.log('Variants fetched:', data?.length || 0, error?.message || 'no error')
             setVariants(data || [])
         }
 
@@ -187,13 +184,6 @@ export default function StockEntryPage() {
         if (selectedProductGroup === 'shoes') {
             variantId = selectedVariant
         } else if (selectedProductGroup === 'textile') {
-            console.log('Textile matching:', {
-                variants: variants.length,
-                selectedSize,
-                selectedColor,
-                matchingTextileProduct: matchingTextileProduct?.name
-            })
-
             // Find variant matching size and color, or just size if color doesn't match
             let matchingVariant = variants.find(v =>
                 v.size === selectedSize && v.color === selectedColor
@@ -209,7 +199,6 @@ export default function StockEntryPage() {
 
         // Better validation with specific error messages
         if (!variantId) {
-            console.log('Variant not found:', { variantsCount: variants.length, selectedSize })
             toast.error('Ürün varyantı bulunamadı', {
                 description: variants.length === 0
                     ? 'Bu ürün için varyant tanımlı değil'
@@ -286,9 +275,8 @@ export default function StockEntryPage() {
             setQuantity('')
 
         } catch (error: any) {
-            console.error('Stock entry error:', error)
             toast.error('Hata', {
-                description: error.message || 'Stok eklenirken bir hata oluştu'
+                description: 'Stok eklenirken bir hata oluştu'
             })
         } finally {
             setIsSubmitting(false)

@@ -58,15 +58,11 @@ export default function DashboardPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Hardcoded admin email as fallback
-  const ADMIN_EMAIL = 'azmicankaradas96@gmail.com'
-
   // Check if current user is admin
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // Check profile first
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('role, full_name')
@@ -76,9 +72,8 @@ export default function DashboardPage() {
         // Set user name
         setUserName(profile?.full_name || user.email?.split('@')[0] || null)
 
-        // If profile says admin OR email matches hardcoded admin
-        const isAdminUser = profile?.role === 'admin' || user.email === ADMIN_EMAIL
-        setIsAdmin(isAdminUser)
+        // Admin kontrolü yalnızca veritabanı role alanına dayalı
+        setIsAdmin(profile?.role === 'admin')
       }
     }
     checkAdmin()

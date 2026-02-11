@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -11,8 +11,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Eye, EyeOff, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
+
+// Şifre güvenlik kuralları
+const passwordRules = [
+    { test: (p: string) => p.length >= 8, label: 'En az 8 karakter' },
+    { test: (p: string) => /[A-Z]/.test(p), label: 'En az 1 büyük harf' },
+    { test: (p: string) => /[a-z]/.test(p), label: 'En az 1 küçük harf' },
+    { test: (p: string) => /[0-9]/.test(p), label: 'En az 1 rakam' },
+    { test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p), label: 'En az 1 özel karakter (!@#$%...)' },
+]
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
@@ -24,6 +33,21 @@ export default function LoginPage() {
     const [lastName, setLastName] = useState('')
     const router = useRouter()
     const supabase = createClient()
+
+    // Şifre gücü hesaplama
+    const passwordStrength = useMemo(() => {
+        const passed = passwordRules.filter(rule => rule.test(password))
+        const score = passed.length
+        const percent = (score / passwordRules.length) * 100
+        let level: 'weak' | 'medium' | 'strong' | 'none' = 'none'
+        let color = 'bg-slate-600'
+        let text = ''
+        if (password.length === 0) { level = 'none' }
+        else if (score <= 2) { level = 'weak'; color = 'bg-red-500'; text = 'Zayıf' }
+        else if (score <= 4) { level = 'medium'; color = 'bg-amber-500'; text = 'Orta' }
+        else { level = 'strong'; color = 'bg-emerald-500'; text = 'Güçlü' }
+        return { score, percent, level, color, text, rules: passwordRules.map(r => ({ ...r, passed: r.test(password) })) }
+    }, [password])
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -37,7 +61,7 @@ export default function LoginPage() {
 
             if (error) {
                 toast.error('Giriş Başarısız', {
-                    description: error.message,
+                    description: 'E-posta veya şifre hatalı.',
                 })
                 return
             }
@@ -51,11 +75,10 @@ export default function LoginPage() {
                     .eq('id', user.id)
                     .single()
 
-                console.log('Profile query result:', { profile, profileError, userId: user.id })
+                // Profile query logged server-side only
 
                 // If we can't fetch profile (RLS or other issue), still allow login and let middleware handle it
                 if (profileError) {
-                    console.error('Profile query error:', profileError)
                     // Continue to dashboard, middleware will handle the redirect
                     toast.success('Giriş Başarılı', {
                         description: 'Yönlendiriliyorsunuz...',
@@ -109,9 +132,10 @@ export default function LoginPage() {
             return
         }
 
-        if (password.length < 6) {
-            toast.error('Şifre Çok Kısa', {
-                description: 'Şifre en az 6 karakter olmalıdır.',
+        const failedRules = passwordRules.filter(rule => !rule.test(password))
+        if (failedRules.length > 0) {
+            toast.error('Şifre Yeterince Güçlü Değil', {
+                description: failedRules.map(r => r.label).join(', '),
             })
             return
         }
@@ -131,7 +155,7 @@ export default function LoginPage() {
 
             if (error) {
                 toast.error('Kayıt Başarısız', {
-                    description: error.message,
+                    description: 'Kayıt işlemi sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.',
                 })
                 return
             }
@@ -303,6 +327,38 @@ export default function LoginPage() {
                                         required
                                         className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20"
                                     />
+                                    {/* Şifre gücü göstergesi */}
+                                    {password.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${passwordStrength.color} rounded-full transition-all duration-300`}
+                                                        style={{ width: `${passwordStrength.percent}%` }}
+                                                    />
+                                                </div>
+                                                <span className={`text-xs font-medium ${passwordStrength.level === 'weak' ? 'text-red-400' :
+                                                        passwordStrength.level === 'medium' ? 'text-amber-400' :
+                                                            'text-emerald-400'
+                                                    }`}>
+                                                    {passwordStrength.text}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-0.5">
+                                                {passwordStrength.rules.map((rule, i) => (
+                                                    <div key={i} className={`flex items-center gap-1.5 text-[10px] ${rule.passed ? 'text-emerald-400' : 'text-slate-500'
+                                                        }`}>
+                                                        {rule.passed ? (
+                                                            <ShieldCheck className="w-3 h-3" />
+                                                        ) : (
+                                                            <ShieldAlert className="w-3 h-3" />
+                                                        )}
+                                                        {rule.label}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="confirm-password" className="text-slate-300">Şifre Tekrar</Label>

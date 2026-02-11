@@ -1,7 +1,83 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// ============================================================
+// Rate Limiting (Bellek içi, Edge Runtime uyumlu)
+// ============================================================
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 dakika
+const MAX_LOGIN_ATTEMPTS = 5
+
+interface RateLimitEntry {
+    count: number
+    firstAttempt: number
+}
+
+const loginAttempts = new Map<string, RateLimitEntry>()
+
+// Eski kayıtları temizle (bellek sızıntısını önle)
+function cleanupRateLimits() {
+    const now = Date.now()
+    for (const [key, entry] of loginAttempts.entries()) {
+        if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+            loginAttempts.delete(key)
+        }
+    }
+}
+
+// Rate limit kontrolü
+function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds: number } {
+    cleanupRateLimits()
+    const now = Date.now()
+    const entry = loginAttempts.get(ip)
+
+    if (!entry) {
+        loginAttempts.set(ip, { count: 1, firstAttempt: now })
+        return { allowed: true, retryAfterSeconds: 0 }
+    }
+
+    // Pencere süresi dolmuşsa sıfırla
+    if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+        loginAttempts.set(ip, { count: 1, firstAttempt: now })
+        return { allowed: true, retryAfterSeconds: 0 }
+    }
+
+    // Limit aşıldı mı?
+    if (entry.count >= MAX_LOGIN_ATTEMPTS) {
+        const retryAfter = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - entry.firstAttempt)) / 1000)
+        return { allowed: false, retryAfterSeconds: retryAfter }
+    }
+
+    entry.count++
+    return { allowed: true, retryAfterSeconds: 0 }
+}
+
 export async function updateSession(request: NextRequest) {
+    const pathname = request.nextUrl.pathname
+
+    // Login sayfasına POST isteklerinde rate limiting uygula
+    if (pathname === '/login' && request.method === 'POST') {
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || request.headers.get('x-real-ip')
+            || 'unknown'
+        const { allowed, retryAfterSeconds } = checkRateLimit(ip)
+
+        if (!allowed) {
+            return new NextResponse(
+                JSON.stringify({
+                    error: 'Çok fazla deneme. Lütfen daha sonra tekrar deneyin.',
+                    retryAfter: retryAfterSeconds
+                }),
+                {
+                    status: 429,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Retry-After': retryAfterSeconds.toString()
+                    }
+                }
+            )
+        }
+    }
+
     let supabaseResponse = NextResponse.next({
         request,
     })
@@ -35,7 +111,7 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    const pathname = request.nextUrl.pathname
+    // pathname already declared above
 
     // Public routes that don't require authentication
     const publicRoutes = ['/login', '/auth', '/pending-approval', '/access-denied']
