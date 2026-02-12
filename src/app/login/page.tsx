@@ -186,9 +186,9 @@ export default function LoginPage() {
                         <Image
                             src="/logo.png"
                             alt="GTC Endüstriyel Ürünler"
-                            width={200}
-                            height={80}
-                            className="h-16 w-auto"
+                            width={300}
+                            height={120}
+                            className="h-24 w-auto"
                             priority
                         />
                     </div>
@@ -338,8 +338,8 @@ export default function LoginPage() {
                                                     />
                                                 </div>
                                                 <span className={`text-xs font-medium ${passwordStrength.level === 'weak' ? 'text-red-400' :
-                                                        passwordStrength.level === 'medium' ? 'text-amber-400' :
-                                                            'text-emerald-400'
+                                                    passwordStrength.level === 'medium' ? 'text-amber-400' :
+                                                        'text-emerald-400'
                                                     }`}>
                                                     {passwordStrength.text}
                                                 </span>
