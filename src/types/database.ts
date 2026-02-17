@@ -153,7 +153,7 @@ export const COLOR_NAMES: Record<ColorType, string> = {
 }
 
 export const TEXTILE_SIZES = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']
-export const SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47']
+export const SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48']
 
 // Requester options for Stock Out
 export const REQUESTER_OPTIONS = [

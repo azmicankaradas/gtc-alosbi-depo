@@ -118,15 +118,15 @@ export default function AdminDashboardPage() {
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+                <h1 className="text-xl md:text-2xl font-bold text-white">Admin Dashboard</h1>
                 <p className="text-slate-400">Sistem durumu ve istatistikler</p>
             </div>
 
             {/* User Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* System Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -238,7 +238,7 @@ export default function AdminDashboardPage() {
                                 className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
                             >
                                 <div>
-                                    <p className="text-white font-medium">{user.email}</p>
+                                    <p className="text-white font-medium text-sm md:text-base truncate max-w-[180px] md:max-w-none">{user.email}</p>
                                     <p className="text-xs text-slate-400">
                                         {new Date(user.created_at).toLocaleDateString('tr-TR', {
                                             day: '2-digit',

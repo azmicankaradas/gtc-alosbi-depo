@@ -182,7 +182,7 @@ export default function AdminUsersPage() {
     const pendingCount = users.filter(u => u.status === 'pending').length
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -252,32 +252,163 @@ export default function AdminUsersPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="border-slate-700 hover:bg-transparent">
-                                        <TableHead className="text-slate-400">E-posta</TableHead>
-                                        <TableHead className="text-slate-400">İsim</TableHead>
-                                        <TableHead className="text-slate-400">Durum</TableHead>
-                                        <TableHead className="text-slate-400">Rol</TableHead>
-                                        <TableHead className="text-slate-400">Kayıt Tarihi</TableHead>
-                                        <TableHead className="text-slate-400 text-right">İşlemler</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredUsers.map((user) => (
-                                        <TableRow key={user.id} className="border-slate-700 hover:bg-slate-700/30">
-                                            <TableCell className="text-white font-medium">{user.email}</TableCell>
-                                            <TableCell className="text-slate-300">{user.full_name || '-'}</TableCell>
-                                            <TableCell>{statusBadge(user.status)}</TableCell>
-                                            <TableCell>{roleBadge(user.role)}</TableCell>
-                                            <TableCell className="text-slate-400 text-sm">
+                        <>
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3">
+                                {filteredUsers.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        className="p-4 bg-slate-700/30 rounded-lg space-y-3"
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-white font-medium text-sm truncate">{user.email}</p>
+                                                <p className="text-slate-400 text-xs mt-0.5">{user.full_name || '-'}</p>
+                                            </div>
+                                            {statusBadge(user.status)}
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            {roleBadge(user.role)}
+                                            <span className="text-slate-500 text-xs">
                                                 {new Date(user.created_at).toLocaleDateString('tr-TR')}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {user.status === 'pending' && (
-                                                        <>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-600/30">
+                                            {user.status === 'pending' && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleApprove(user)}
+                                                        disabled={actionLoading === user.id}
+                                                        className="flex-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
+                                                    >
+                                                        {actionLoading === user.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Check className="h-4 w-4 mr-1" />
+                                                        )}
+                                                        Onayla
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setSelectedUser(user)
+                                                            setRejectDialogOpen(true)
+                                                        }}
+                                                        className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                    >
+                                                        <X className="h-4 w-4 mr-1" />
+                                                        Reddet
+                                                    </Button>
+                                                </>
+                                            )}
+                                            {user.status === 'approved' && (
+                                                <Select
+                                                    value={user.role}
+                                                    onValueChange={(value) => handleRoleChange(user, value as 'user' | 'admin')}
+                                                >
+                                                    <SelectTrigger className="w-full h-8 text-xs bg-slate-700/50 border-slate-600">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-slate-800 border-slate-700">
+                                                        <SelectItem value="user">Kullanıcı</SelectItem>
+                                                        <SelectItem value="admin">Admin</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            {user.status === 'rejected' && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleApprove(user)}
+                                                    disabled={actionLoading === user.id}
+                                                    className="w-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
+                                                >
+                                                    {actionLoading === user.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Check className="h-4 w-4 mr-1" />
+                                                    )}
+                                                    Onayla
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {filteredUsers.length === 0 && (
+                                    <p className="text-center text-slate-500 py-8">Kullanıcı bulunamadı</p>
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-slate-700 hover:bg-transparent">
+                                            <TableHead className="text-slate-400">E-posta</TableHead>
+                                            <TableHead className="text-slate-400">İsim</TableHead>
+                                            <TableHead className="text-slate-400">Durum</TableHead>
+                                            <TableHead className="text-slate-400">Rol</TableHead>
+                                            <TableHead className="text-slate-400">Kayıt Tarihi</TableHead>
+                                            <TableHead className="text-slate-400 text-right">İşlemler</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredUsers.map((user) => (
+                                            <TableRow key={user.id} className="border-slate-700 hover:bg-slate-700/30">
+                                                <TableCell className="text-white font-medium">{user.email}</TableCell>
+                                                <TableCell className="text-slate-300">{user.full_name || '-'}</TableCell>
+                                                <TableCell>{statusBadge(user.status)}</TableCell>
+                                                <TableCell>{roleBadge(user.role)}</TableCell>
+                                                <TableCell className="text-slate-400 text-sm">
+                                                    {new Date(user.created_at).toLocaleDateString('tr-TR')}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {user.status === 'pending' && (
+                                                            <>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => handleApprove(user)}
+                                                                    disabled={actionLoading === user.id}
+                                                                    className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
+                                                                >
+                                                                    {actionLoading === user.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Check className="h-4 w-4 mr-1" />
+                                                                    )}
+                                                                    Onayla
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => {
+                                                                        setSelectedUser(user)
+                                                                        setRejectDialogOpen(true)
+                                                                    }}
+                                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                                >
+                                                                    <X className="h-4 w-4 mr-1" />
+                                                                    Reddet
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        {user.status === 'approved' && (
+                                                            <Select
+                                                                value={user.role}
+                                                                onValueChange={(value) => handleRoleChange(user, value as 'user' | 'admin')}
+                                                            >
+                                                                <SelectTrigger className="w-32 h-8 text-xs bg-slate-700/50 border-slate-600">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="bg-slate-800 border-slate-700">
+                                                                    <SelectItem value="user">Kullanıcı</SelectItem>
+                                                                    <SelectItem value="admin">Admin</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                        {user.status === 'rejected' && (
                                                             <Button
                                                                 size="sm"
                                                                 onClick={() => handleApprove(user)}
@@ -291,63 +422,22 @@ export default function AdminUsersPage() {
                                                                 )}
                                                                 Onayla
                                                             </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => {
-                                                                    setSelectedUser(user)
-                                                                    setRejectDialogOpen(true)
-                                                                }}
-                                                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                            >
-                                                                <X className="h-4 w-4 mr-1" />
-                                                                Reddet
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    {user.status === 'approved' && (
-                                                        <Select
-                                                            value={user.role}
-                                                            onValueChange={(value) => handleRoleChange(user, value as 'user' | 'admin')}
-                                                        >
-                                                            <SelectTrigger className="w-32 h-8 text-xs bg-slate-700/50 border-slate-600">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="bg-slate-800 border-slate-700">
-                                                                <SelectItem value="user">Kullanıcı</SelectItem>
-                                                                <SelectItem value="admin">Admin</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    )}
-                                                    {user.status === 'rejected' && (
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => handleApprove(user)}
-                                                            disabled={actionLoading === user.id}
-                                                            className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
-                                                        >
-                                                            {actionLoading === user.id ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <Check className="h-4 w-4 mr-1" />
-                                                            )}
-                                                            Onayla
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filteredUsers.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-12 text-slate-400">
-                                                Kullanıcı bulunamadı
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {filteredUsers.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="text-center py-12 text-slate-400">
+                                                    Kullanıcı bulunamadı
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
