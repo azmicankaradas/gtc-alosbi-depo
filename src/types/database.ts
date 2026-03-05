@@ -163,3 +163,37 @@ export const REQUESTER_OPTIONS = [
     'Osman Çobalak'
 ] as const
 
+// Requester interface (for database table)
+export interface Requester {
+    id: string
+    name: string
+    is_active: boolean
+    created_at: string
+    updated_at: string
+}
+
+// Stock Count interfaces
+export interface StockCount {
+    id: string
+    title: string
+    status: 'in_progress' | 'completed' | 'cancelled'
+    floor_filter: FloorType | null
+    shelf_filter: number | null
+    started_by: string | null
+    started_at: string
+    completed_at: string | null
+    notes: string | null
+}
+
+export interface StockCountItem {
+    id: string
+    count_id: string
+    stock_id: string
+    variant_id: string
+    location_id: string
+    system_quantity: number
+    counted_quantity: number | null
+    difference: number | null
+    notes: string | null
+    counted_at: string | null
+}

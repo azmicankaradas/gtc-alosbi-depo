@@ -16,7 +16,8 @@ import {
     Warehouse,
     Loader2,
     Menu,
-    X
+    X,
+    UserPlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/users', label: 'Kullanıcılar', icon: Users },
+    { href: '/admin/requesters', label: 'Talep Edenler', icon: UserPlus },
 ]
 
 export default function AdminLayout({

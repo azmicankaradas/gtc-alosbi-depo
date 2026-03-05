@@ -17,7 +17,8 @@ import {
     ShieldCheck,
     Search,
     Loader2,
-    RefreshCw
+    RefreshCw,
+    Trash2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -66,6 +67,7 @@ export default function AdminUsersPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
     const [rejectReason, setRejectReason] = useState('')
     const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -151,6 +153,38 @@ export default function AdminUsersPage() {
             toast.success('Rol güncellendi', { description: `${user.email} artık ${newRole === 'admin' ? 'Admin' : 'Kullanıcı'}` })
             fetchUsers()
         }
+        setActionLoading(null)
+    }
+
+    const handleDelete = async () => {
+        if (!selectedUser) return
+        setActionLoading(selectedUser.id)
+
+        try {
+            // Silme işlemini logla
+            const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+            // user_profiles tablosundan sil
+            const { error } = await supabase
+                .from('user_profiles')
+                .delete()
+                .eq('id', selectedUser.id)
+
+            if (error) {
+                toast.error('Silme başarısız', { description: error.message })
+            } else {
+                toast.success('Kullanıcı silindi', {
+                    description: `${selectedUser.email} başarıyla silindi.`,
+                })
+                console.log(`[AUDIT] Kullanıcı silindi: ${selectedUser.email} (${selectedUser.id}) - Silen: ${currentUser?.email}`)
+                fetchUsers()
+            }
+        } catch (error) {
+            toast.error('Bir hata oluştu', { description: 'Lütfen tekrar deneyin.' })
+        }
+
+        setDeleteDialogOpen(false)
+        setSelectedUser(null)
         setActionLoading(null)
     }
 
@@ -332,6 +366,20 @@ export default function AdminUsersPage() {
                                                     Onayla
                                                 </Button>
                                             )}
+                                            {user.role !== 'admin' && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setSelectedUser(user)
+                                                        setDeleteDialogOpen(true)
+                                                    }}
+                                                    disabled={actionLoading === user.id}
+                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -423,6 +471,20 @@ export default function AdminUsersPage() {
                                                                 Onayla
                                                             </Button>
                                                         )}
+                                                        {user.role !== 'admin' && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    setSelectedUser(user)
+                                                                    setDeleteDialogOpen(true)
+                                                                }}
+                                                                disabled={actionLoading === user.id}
+                                                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -476,6 +538,49 @@ export default function AdminUsersPage() {
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : null}
                             Reddet
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent className="bg-slate-800 border-slate-700 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-400">Kullanıcıyı Sil</DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            <span className="font-semibold text-white">{selectedUser?.email}</span> kullanıcısını kalıcı olarak silmek istediğinize emin misiniz?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                            <p className="text-xs text-red-300">
+                                <strong>⚠️ Dikkat:</strong> Bu işlem geri alınamaz. Kullanıcı profili kalıcı olarak silinecektir.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setDeleteDialogOpen(false)
+                                setSelectedUser(null)
+                            }}
+                            className="border-slate-600 text-slate-300"
+                        >
+                            İptal
+                        </Button>
+                        <Button
+                            onClick={handleDelete}
+                            disabled={actionLoading === selectedUser?.id}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {actionLoading === selectedUser?.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                            )}
+                            Kalıcı Olarak Sil
                         </Button>
                     </DialogFooter>
                 </DialogContent>

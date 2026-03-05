@@ -1,6 +1,6 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts'
 
 interface StockChartProps {
     textileCount: number
@@ -151,6 +151,125 @@ export function CategoryBarChart({ data }: { data: CategoryData[] }) {
                         fill="#10b981"
                         radius={[0, 4, 4, 0]}
                         barSize={20}
+                    />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    )
+}
+
+// Monthly Trend Chart - Line Chart for stock in/out per month
+export interface MonthlyTrendData {
+    month: string
+    inCount: number
+    outCount: number
+}
+
+export function MonthlyTrendChart({ data }: { data: MonthlyTrendData[] }) {
+    if (data.length === 0) {
+        return (
+            <div className="h-[250px] flex items-center justify-center text-slate-500 text-sm">
+                Henüz yeterli veri yok
+            </div>
+        )
+    }
+
+    return (
+        <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis
+                        dataKey="month"
+                        tick={{ fill: '#94a3b8', fontSize: 11 }}
+                        axisLine={{ stroke: '#334155' }}
+                        tickLine={false}
+                    />
+                    <YAxis
+                        tick={{ fill: '#94a3b8', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                    />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#fff'
+                        }}
+                        formatter={((value: number, name: string) => [
+                            `${value} adet`,
+                            name === 'inCount' ? 'Giriş' : 'Çıkış'
+                        ]) as any}
+                    />
+                    <Legend
+                        formatter={(value) => value === 'inCount' ? 'Giriş' : 'Çıkış'}
+                        wrapperStyle={{ fontSize: '12px' }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="inCount"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        dot={{ fill: '#10b981', r: 4 }}
+                        activeDot={{ r: 6 }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="outCount"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        dot={{ fill: '#ef4444', r: 4 }}
+                        activeDot={{ r: 6 }}
+                    />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
+    )
+}
+
+// Top Movers Chart - Bar Chart for most active products
+export interface TopMoverData {
+    name: string
+    totalMovement: number
+}
+
+export function TopMoversChart({ data }: { data: TopMoverData[] }) {
+    if (data.length === 0 || data.every(d => d.totalMovement === 0)) {
+        return (
+            <div className="h-[250px] flex items-center justify-center text-slate-500 text-sm">
+                Henüz hareket verisi yok
+            </div>
+        )
+    }
+
+    return (
+        <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <XAxis type="number" hide />
+                    <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={120}
+                        tick={{ fill: '#94a3b8', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                    />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#fff'
+                        }}
+                        formatter={(value) => [`${value ?? 0} hareket`, 'Toplam']}
+                    />
+                    <Bar
+                        dataKey="totalMovement"
+                        fill="#8b5cf6"
+                        radius={[0, 4, 4, 0]}
+                        barSize={18}
                     />
                 </BarChart>
             </ResponsiveContainer>

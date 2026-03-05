@@ -51,13 +51,21 @@ export default function SearchPage() {
         } catch (error) {
             console.error('Search error:', error)
 
-            // Fallback to direct query if RPC fails
+            // Fallback: kelime sırası bağımsız arama
             try {
-                const { data } = await supabase
+                const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean)
+                let query = supabase
                     .from('stock_full_view')
                     .select('*')
-                    .or(`sku.ilike.%${searchQuery}%,product_name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%,size.ilike.%${searchQuery}%,location_code.ilike.%${searchQuery}%`)
-                    .limit(50)
+
+                // Her kelime için OR filtresi oluştur ve hepsini AND ile birleştir
+                for (const word of words) {
+                    query = query.or(
+                        `sku.ilike.%${word}%,product_name.ilike.%${word}%,brand.ilike.%${word}%,size.ilike.%${word}%,location_code.ilike.%${word}%`
+                    )
+                }
+
+                const { data } = await query.limit(100)
 
                 setResults((data as StockFullView[]) || [])
             } catch (fallbackError) {

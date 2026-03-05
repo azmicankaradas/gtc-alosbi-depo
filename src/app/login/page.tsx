@@ -23,6 +23,16 @@ const passwordRules = [
     { test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p), label: 'En az 1 özel karakter (!@#$%...)' },
 ]
 
+// E-posta domain kısıtlaması
+const ALLOWED_DOMAIN = '@gtcendustriyel.com'
+const ADMIN_EMAILS = ['admin@gtcendustriyel.com'] // Muaf e-postalar
+
+const isEmailAllowed = (email: string): boolean => {
+    const lowerEmail = email.toLowerCase().trim()
+    if (ADMIN_EMAILS.some(admin => admin.toLowerCase() === lowerEmail)) return true
+    return lowerEmail.endsWith(ALLOWED_DOMAIN.toLowerCase())
+}
+
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
@@ -124,6 +134,14 @@ export default function LoginPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // E-posta domain kontrolü
+        if (!isEmailAllowed(email)) {
+            toast.error('Geçersiz E-posta Adresi', {
+                description: `Yalnızca ${ALLOWED_DOMAIN} uzantılı e-postalar ile kayıt olabilirsiniz.`,
+            })
+            return
+        }
 
         if (password !== confirmPassword) {
             toast.error('Şifreler Eşleşmiyor', {
@@ -315,6 +333,9 @@ export default function LoginPage() {
                                         required
                                         className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20"
                                     />
+                                    <p className="text-[11px] text-slate-500">
+                                        Yalnızca <span className="text-emerald-400 font-medium">{ALLOWED_DOMAIN}</span> uzantılı e-postalar kabul edilir
+                                    </p>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="reg-password" className="text-slate-300">Şifre</Label>

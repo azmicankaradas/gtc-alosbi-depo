@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { StockFullView } from '@/types/database'
-import { REQUESTER_OPTIONS, COLOR_NAMES, TEXTILE_CATEGORY_NAMES, FABRIC_NAMES } from '@/types/database'
+import { COLOR_NAMES, TEXTILE_CATEGORY_NAMES, FABRIC_NAMES } from '@/types/database'
 import { generateStockOutReceipt, downloadReceipt, type StockOutReceiptData } from '@/lib/pdf-generator'
 
 // Document code generator
@@ -80,7 +80,29 @@ export default function StockOutPage() {
     const [transactionComplete, setTransactionComplete] = useState(false)
     const [lastTransaction, setLastTransaction] = useState<TransactionResult | null>(null)
 
+    // Dynamic requester list from DB
+    const [requesterOptions, setRequesterOptions] = useState<string[]>([])
+
     const supabase = createClient()
+
+    // Load requesters from database
+    useEffect(() => {
+        const loadRequesters = async () => {
+            const { data, error } = await supabase
+                .from('requesters')
+                .select('name')
+                .eq('is_active', true)
+                .order('name')
+
+            if (error) {
+                console.error('Requester load error:', error)
+                // Fallback to empty
+                return
+            }
+            setRequesterOptions(data?.map(r => r.name) || [])
+        }
+        loadRequesters()
+    }, [])
 
     // Search for stock items using existing view
     const handleSearch = async () => {
@@ -437,7 +459,7 @@ export default function StockOutPage() {
                                         <SelectValue placeholder="Talep eden kişiyi seçin..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-slate-800 border-slate-700">
-                                        {REQUESTER_OPTIONS.map((name) => (
+                                        {requesterOptions.map((name) => (
                                             <SelectItem key={name} value={name} className="text-white hover:bg-slate-700">
                                                 {name}
                                             </SelectItem>
@@ -575,8 +597,8 @@ export default function StockOutPage() {
                                                 onClick={() => available > 0 && handleSelectStock(item)}
                                                 disabled={available <= 0}
                                                 className={`w-full p-3 rounded-lg text-left transition-colors ${available <= 0
-                                                        ? 'bg-slate-700/10 opacity-50 cursor-not-allowed'
-                                                        : 'bg-slate-700/30 hover:bg-slate-700/50'
+                                                    ? 'bg-slate-700/10 opacity-50 cursor-not-allowed'
+                                                    : 'bg-slate-700/30 hover:bg-slate-700/50'
                                                     }`}
                                             >
                                                 <div className="flex items-center justify-between">

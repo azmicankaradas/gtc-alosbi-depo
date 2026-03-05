@@ -1,4 +1,13 @@
 import type { NextConfig } from "next";
+// @ts-expect-error next-pwa does not have proper types
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
 const securityHeaders = [
   {
@@ -60,4 +69,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

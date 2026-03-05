@@ -18,7 +18,8 @@ import {
     Loader2,
     Check,
     Shirt,
-    Footprints
+    Footprints,
+    ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Product, Variant, Location, ProductGroup, TextileCategory, FabricType, ColorType } from '@/types/database'
@@ -303,6 +304,29 @@ export default function StockEntryPage() {
         )
     }
 
+    // Adım hesaplama
+    const getCurrentStep = () => {
+        if (!selectedProductGroup) return 0
+        if (selectedProductGroup === 'textile') {
+            if (!selectedSize) return 1
+            if (!selectedLocation) return 2
+            if (!quantity) return 2
+            return 3
+        } else {
+            if (!selectedVariant) return 1
+            if (!selectedLocation) return 2
+            if (!quantity) return 2
+            return 3
+        }
+    }
+    const currentStep = getCurrentStep()
+    const steps = [
+        { label: 'Ürün Türü', icon: Package },
+        { label: 'Detaylar', icon: selectedProductGroup === 'shoes' ? Footprints : Shirt },
+        { label: 'Konum', icon: MapPin },
+        { label: 'Onay', icon: Check },
+    ]
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
             {/* Header */}
@@ -323,7 +347,42 @@ export default function StockEntryPage() {
             </header>
 
             <main className="container mx-auto px-4 py-6 max-w-2xl">
-                <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Step Indicator */}
+                <div className="flex items-center justify-between mb-6 px-2">
+                    {steps.map((step, index) => {
+                        const StepIcon = step.icon
+                        const isActive = currentStep === index
+                        const isCompleted = currentStep > index
+                        return (
+                            <div key={index} className="flex items-center">
+                                <div className="flex flex-col items-center">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${isCompleted
+                                            ? 'bg-emerald-500 text-white'
+                                            : isActive
+                                                ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
+                                                : 'bg-slate-700/50 border border-slate-600 text-slate-500'
+                                        }`}>
+                                        {isCompleted ? (
+                                            <Check className="w-4 h-4" />
+                                        ) : (
+                                            <StepIcon className="w-4 h-4" />
+                                        )}
+                                    </div>
+                                    <span className={`text-[10px] mt-1 font-medium ${isActive || isCompleted ? 'text-emerald-400' : 'text-slate-500'
+                                        }`}>
+                                        {step.label}
+                                    </span>
+                                </div>
+                                {index < steps.length - 1 && (
+                                    <ChevronRight className={`w-4 h-4 mx-1 mb-4 ${currentStep > index ? 'text-emerald-500' : 'text-slate-600'
+                                        }`} />
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Product Group Selection */}
                     <Card className="bg-slate-800/50 border-slate-700/50">
                         <CardHeader>

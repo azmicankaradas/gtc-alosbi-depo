@@ -17,7 +17,8 @@ import {
     ArrowRightLeft,
     Settings,
     History,
-    Calendar
+    Calendar,
+    User
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -52,6 +53,8 @@ export default function MovementsPage() {
     const [movements, setMovements] = useState<StockMovement[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all')
+    const [userFilter, setUserFilter] = useState<string>('all')
+    const [userProfiles, setUserProfiles] = useState<Record<string, string>>({})
     const supabase = createClient()
 
     useEffect(() => {
@@ -76,6 +79,20 @@ export default function MovementsPage() {
 
             if (error) throw error
             setMovements(data || [])
+
+            // Kullanıcı profillerini çek
+            const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))] as string[]
+            if (userIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('user_profiles')
+                    .select('id, email, full_name')
+                    .in('id', userIds)
+                const profileMap: Record<string, string> = {}
+                profiles?.forEach(p => {
+                    profileMap[p.id] = p.full_name || p.email || 'Bilinmeyen'
+                })
+                setUserProfiles(profileMap)
+            }
         } catch (error) {
             console.error('Error fetching movements:', error)
             toast.error('Hareketler yüklenirken hata oluştu')
@@ -116,9 +133,13 @@ export default function MovementsPage() {
     }
 
     const filteredMovements = movements.filter(m => {
-        if (filter === 'all') return true
-        return m.movement_type === filter
+        const matchesType = filter === 'all' || m.movement_type === filter
+        const matchesUser = userFilter === 'all' || m.user_id === userFilter
+        return matchesType && matchesUser
     })
+
+    // Benzersiz kullanıcıları al (filtre için)
+    const uniqueUsers = [...new Set(movements.map(m => m.user_id).filter(Boolean))] as string[]
 
     // Stats
     const totalIn = movements.filter(m => m.movement_type === 'in').reduce((sum, m) => sum + m.quantity, 0)
@@ -182,19 +203,37 @@ export default function MovementsPage() {
                 {/* Filter */}
                 <Card className="bg-slate-800/50 border-slate-700/50 mb-6">
                     <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-slate-400">Filtre:</span>
-                            <Select value={filter} onValueChange={(v) => setFilter(v as 'all' | 'in' | 'out')}>
-                                <SelectTrigger className="w-40 bg-slate-700/50 border-slate-600 text-white">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-slate-800 border-slate-700">
-                                    <SelectItem value="all" className="text-white">Tümü</SelectItem>
-                                    <SelectItem value="in" className="text-white">Sadece Giriş</SelectItem>
-                                    <SelectItem value="out" className="text-white">Sadece Çıkış</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <span className="text-sm text-slate-500 ml-auto">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-slate-400">Hareket:</span>
+                                <Select value={filter} onValueChange={(v) => setFilter(v as 'all' | 'in' | 'out')}>
+                                    <SelectTrigger className="w-36 bg-slate-700/50 border-slate-600 text-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-800 border-slate-700">
+                                        <SelectItem value="all" className="text-white">Tümü</SelectItem>
+                                        <SelectItem value="in" className="text-white">Sadece Giriş</SelectItem>
+                                        <SelectItem value="out" className="text-white">Sadece Çıkış</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-slate-400">Kullanıcı:</span>
+                                <Select value={userFilter} onValueChange={setUserFilter}>
+                                    <SelectTrigger className="w-44 bg-slate-700/50 border-slate-600 text-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-800 border-slate-700">
+                                        <SelectItem value="all" className="text-white">Tüm Kullanıcılar</SelectItem>
+                                        {uniqueUsers.map(uid => (
+                                            <SelectItem key={uid} value={uid} className="text-white">
+                                                {userProfiles[uid] || uid.slice(0, 8)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <span className="text-sm text-slate-500 sm:ml-auto">
                                 {filteredMovements.length} hareket
                             </span>
                         </div>
@@ -225,19 +264,19 @@ export default function MovementsPage() {
                                     <div
                                         key={movement.id}
                                         className={`p-4 rounded-lg border ${movement.movement_type === 'in'
-                                                ? 'bg-emerald-500/5 border-emerald-500/20'
-                                                : movement.movement_type === 'out'
-                                                    ? 'bg-red-500/5 border-red-500/20'
-                                                    : 'bg-slate-700/30 border-slate-600/30'
+                                            ? 'bg-emerald-500/5 border-emerald-500/20'
+                                            : movement.movement_type === 'out'
+                                                ? 'bg-red-500/5 border-red-500/20'
+                                                : 'bg-slate-700/30 border-slate-600/30'
                                             }`}
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="flex items-start gap-3">
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${movement.movement_type === 'in'
-                                                        ? 'bg-emerald-500/20'
-                                                        : movement.movement_type === 'out'
-                                                            ? 'bg-red-500/20'
-                                                            : 'bg-slate-600/50'
+                                                    ? 'bg-emerald-500/20'
+                                                    : movement.movement_type === 'out'
+                                                        ? 'bg-red-500/20'
+                                                        : 'bg-slate-600/50'
                                                     }`}>
                                                     {getMovementIcon(movement.movement_type)}
                                                 </div>
@@ -257,10 +296,10 @@ export default function MovementsPage() {
                                             <div className="text-right">
                                                 {getMovementBadge(movement.movement_type)}
                                                 <p className={`text-lg font-bold mt-1 ${movement.movement_type === 'in'
-                                                        ? 'text-emerald-400'
-                                                        : movement.movement_type === 'out'
-                                                            ? 'text-red-400'
-                                                            : 'text-slate-300'
+                                                    ? 'text-emerald-400'
+                                                    : movement.movement_type === 'out'
+                                                        ? 'text-red-400'
+                                                        : 'text-slate-300'
                                                     }`}>
                                                     {movement.movement_type === 'in' ? '+' : '-'}{movement.quantity}
                                                 </p>
@@ -270,11 +309,20 @@ export default function MovementsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-700/50">
+                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-700/50 flex-wrap">
                                             <Calendar className="w-3 h-3 text-slate-500" />
                                             <span className="text-xs text-slate-500">
                                                 {formatDate(movement.created_at)}
                                             </span>
+                                            {movement.user_id && userProfiles[movement.user_id] && (
+                                                <>
+                                                    <span className="text-xs text-slate-600">•</span>
+                                                    <User className="w-3 h-3 text-slate-500" />
+                                                    <span className="text-xs text-slate-400">
+                                                        {userProfiles[movement.user_id]}
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
