@@ -41,13 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 # sensitive data & docs
-supabase/
+/supabase/
 *.pdf
 *.xlsx
 
-# PWA generated files
-public/sw.js
-public/sw.js.map
+# PWA generated files (if any build tools generate workers)
 public/workbox-*.js
 public/workbox-*.js.map
 public/worker-*.js
