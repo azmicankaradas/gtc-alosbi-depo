@@ -69,12 +69,14 @@ export async function POST(request: NextRequest) {
             .eq('user_id', userId)
 
         // 3. stock_counts.started_by (if table exists)
-        await supabaseAdmin
-            .from('stock_counts')
-            .update({ started_by: null })
-            .eq('started_by', userId)
-            .then(() => { })
-            .catch(() => { }) // Ignore if table doesn't exist
+        try {
+            await supabaseAdmin
+                .from('stock_counts')
+                .update({ started_by: null })
+                .eq('started_by', userId)
+        } catch {
+            // Ignore if table doesn't exist
+        }
 
         // 4. Delete user profile explicitly
         await supabaseAdmin
