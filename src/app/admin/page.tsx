@@ -5,25 +5,17 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
     Users,
-    Clock,
-    CheckCircle,
-    XCircle,
     Package,
     TrendingUp,
     MapPin,
     Activity,
     Loader2
 } from 'lucide-react'
-import Link from 'next/link'
 
 interface AdminStats {
     totalUsers: number
-    pendingUsers: number
-    approvedUsers: number
-    rejectedUsers: number
     totalProducts: number
     totalStock: number
     filledLocations: number
@@ -40,19 +32,14 @@ export default function AdminDashboardPage() {
         const fetchStats = async () => {
             try {
                 // User stats
-                const { data: users } = await supabase
+                const { count: totalUsers } = await supabase
                     .from('user_profiles')
-                    .select('status')
-
-                const totalUsers = users?.length || 0
-                const pendingUsers = users?.filter(u => u.status === 'pending').length || 0
-                const approvedUsers = users?.filter(u => u.status === 'approved').length || 0
-                const rejectedUsers = users?.filter(u => u.status === 'rejected').length || 0
+                    .select('*', { count: 'exact', head: true })
 
                 // Recent users
                 const { data: recent } = await supabase
                     .from('user_profiles')
-                    .select('*')
+                    .select('id, email, full_name, created_at')
                     .order('created_at', { ascending: false })
                     .limit(5)
 
@@ -64,7 +51,7 @@ export default function AdminDashboardPage() {
                     .select('*', { count: 'exact', head: true })
                     .eq('is_active', true)
 
-                // Stock stats - only count items with quantity > 0
+                // Stock stats
                 const { data: stockData } = await supabase
                     .from('stock')
                     .select('quantity, location_id')
@@ -79,10 +66,7 @@ export default function AdminDashboardPage() {
                     .select('*', { count: 'exact', head: true })
 
                 setStats({
-                    totalUsers,
-                    pendingUsers,
-                    approvedUsers,
-                    rejectedUsers,
+                    totalUsers: totalUsers || 0,
                     totalProducts: productCount || 0,
                     totalStock,
                     filledLocations: uniqueLocations.size,
@@ -106,32 +90,21 @@ export default function AdminDashboardPage() {
         )
     }
 
-    const statusBadge = (status: string) => {
-        switch (status) {
-            case 'approved':
-                return <Badge className="bg-emerald-500/20 text-emerald-400 border-0">Onaylı</Badge>
-            case 'rejected':
-                return <Badge className="bg-red-500/20 text-red-400 border-0">Reddedildi</Badge>
-            default:
-                return <Badge className="bg-amber-500/20 text-amber-400 border-0">Bekliyor</Badge>
-        }
-    }
-
     return (
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white">Admin Dashboard</h1>
+                <h1 className="text-xl md:text-2xl font-bold text-white">Yönetim Paneli</h1>
                 <p className="text-slate-400">Sistem durumu ve istatistikler</p>
             </div>
 
-            {/* User Stats */}
+            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-slate-400 text-sm">Toplam Kullanıcı</p>
+                                <p className="text-slate-400 text-sm">Kullanıcılar</p>
                                 <p className="text-2xl font-bold text-white">{stats?.totalUsers}</p>
                             </div>
                             <Users className="w-8 h-8 text-purple-400" />
@@ -139,47 +112,6 @@ export default function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Link href="/admin/users?status=pending">
-                    <Card className="bg-amber-500/10 border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-amber-400 text-sm">Bekleyen Onay</p>
-                                    <p className="text-2xl font-bold text-white">{stats?.pendingUsers}</p>
-                                </div>
-                                <Clock className="w-8 h-8 text-amber-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Link>
-
-                <Card className="bg-emerald-500/10 border-emerald-500/20">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-emerald-400 text-sm">Onaylı</p>
-                                <p className="text-2xl font-bold text-white">{stats?.approvedUsers}</p>
-                            </div>
-                            <CheckCircle className="w-8 h-8 text-emerald-400" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-red-500/10 border-red-500/20">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-red-400 text-sm">Reddedilen</p>
-                                <p className="text-2xl font-bold text-white">{stats?.rejectedUsers}</p>
-                            </div>
-                            <XCircle className="w-8 h-8 text-red-400" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* System Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -240,7 +172,7 @@ export default function AdminDashboardPage() {
                                 <div>
                                     <p className="text-white font-medium text-sm md:text-base truncate max-w-[180px] md:max-w-none">{user.email}</p>
                                     <p className="text-xs text-slate-400">
-                                        {new Date(user.created_at).toLocaleDateString('tr-TR', {
+                                        {user.full_name || '-'} • {new Date(user.created_at).toLocaleDateString('tr-TR', {
                                             day: '2-digit',
                                             month: '2-digit',
                                             year: 'numeric',
@@ -249,7 +181,6 @@ export default function AdminDashboardPage() {
                                         })}
                                     </p>
                                 </div>
-                                {statusBadge(user.status)}
                             </div>
                         ))}
                         {recentUsers.length === 0 && (

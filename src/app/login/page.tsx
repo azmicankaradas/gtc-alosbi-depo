@@ -25,11 +25,9 @@ const passwordRules = [
 
 // E-posta domain kısıtlaması
 const ALLOWED_DOMAIN = '@gtcendustriyel.com'
-const ADMIN_EMAILS = ['admin@gtcendustriyel.com'] // Muaf e-postalar
 
 const isEmailAllowed = (email: string): boolean => {
     const lowerEmail = email.toLowerCase().trim()
-    if (ADMIN_EMAILS.some(admin => admin.toLowerCase() === lowerEmail)) return true
     return lowerEmail.endsWith(ALLOWED_DOMAIN.toLowerCase())
 }
 
@@ -74,47 +72,6 @@ export default function LoginPage() {
                     description: 'E-posta veya şifre hatalı.',
                 })
                 return
-            }
-
-            // Check approval status after successful authentication
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                const { data: profile, error: profileError } = await supabase
-                    .from('user_profiles')
-                    .select('is_approved, status')
-                    .eq('id', user.id)
-                    .single()
-
-                // Profile query logged server-side only
-
-                // If we can't fetch profile (RLS or other issue), still allow login and let middleware handle it
-                if (profileError) {
-                    // Continue to dashboard, middleware will handle the redirect
-                    toast.success('Giriş Başarılı', {
-                        description: 'Yönlendiriliyorsunuz...',
-                    })
-                    router.push('/')
-                    router.refresh()
-                    return
-                }
-
-                if (profile && (!profile.is_approved || profile.status === 'pending')) {
-                    toast.info('Onay Bekleniyor', {
-                        description: 'Hesabınız yönetici onayı bekliyor.',
-                    })
-                    router.push('/pending-approval')
-                    router.refresh()
-                    return
-                }
-
-                if (profile && profile.status === 'rejected') {
-                    toast.error('Erişim Reddedildi', {
-                        description: 'Hesabınız reddedilmiş.',
-                    })
-                    router.push('/access-denied')
-                    router.refresh()
-                    return
-                }
             }
 
             toast.success('Giriş Başarılı', {
@@ -290,12 +247,6 @@ export default function LoginPage() {
 
                         <TabsContent value="register">
                             <form onSubmit={handleRegister} className="space-y-4 mt-4">
-                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
-                                    <p className="text-xs text-amber-200">
-                                        <strong>Not:</strong> Kayıt sonrası hesabınız yönetici onayına sunulacaktır.
-                                        Onay alana kadar sisteme erişim sağlayamazsınız.
-                                    </p>
-                                </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
                                         <Label htmlFor="firstName" className="text-slate-300">Ad</Label>

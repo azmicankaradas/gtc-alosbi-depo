@@ -41,11 +41,8 @@ export default function AdminLayout({
     const [error, setError] = useState<string | null>(null)
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
-    // Hardcoded admin email as fallback
-    const ADMIN_EMAIL = 'azmicankaradas96@gmail.com'
-
     useEffect(() => {
-        const checkAdmin = async () => {
+        const checkAuth = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
                 router.push('/login')
@@ -53,37 +50,9 @@ export default function AdminLayout({
             }
 
             setUserEmail(user.email || '')
-
-            // Try to get profile from database
-            const { data: profile, error: profileError } = await supabase
-                .from('user_profiles')
-                .select('role')
-                .eq('id', user.id)
-                .single()
-
-            // If profile exists and has admin role
-            if (profile?.role === 'admin') {
-                setIsAdmin(true)
-                return
-            }
-
-            // Fallback: check if email matches hardcoded admin
-            if (user.email === ADMIN_EMAIL) {
-                setIsAdmin(true)
-                return
-            }
-
-            // If profile query failed, show specific error
-            if (profileError) {
-                console.error('Profile error:', profileError)
-                setError(`Veritabanı hatası: ${profileError.message}. Lütfen SQL migration'ları çalıştırdığınızdan emin olun.`)
-                return
-            }
-
-            // User exists but is not admin
-            setError('Bu sayfaya erişim yetkiniz yok. Admin rolüne sahip olmanız gerekiyor.')
+            setIsAdmin(true)
         }
-        checkAdmin()
+        checkAuth()
     }, [supabase, router])
 
     // Close sidebar on route change (mobile)

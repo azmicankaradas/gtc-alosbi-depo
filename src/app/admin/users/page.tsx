@@ -10,11 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
     Users,
-    Check,
-    X,
-    Clock,
-    Shield,
-    ShieldCheck,
     Search,
     Loader2,
     RefreshCw,
@@ -31,13 +26,6 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -45,18 +33,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
 
 interface UserProfile {
     id: string
     email: string
     full_name: string | null
-    is_approved: boolean
-    status: 'pending' | 'approved' | 'rejected'
     role: 'user' | 'admin'
-    rejected_reason: string | null
     created_at: string
-    approved_at: string | null
 }
 
 export default function AdminUsersPage() {
@@ -65,18 +48,15 @@ export default function AdminUsersPage() {
     const [users, setUsers] = useState<UserProfile[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState<string>('all')
-    const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
-    const [rejectReason, setRejectReason] = useState('')
     const [actionLoading, setActionLoading] = useState<string | null>(null)
 
     const fetchUsers = async () => {
         setLoading(true)
         const { data, error } = await supabase
             .from('user_profiles')
-            .select('*')
+            .select('id, email, full_name, role, created_at')
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -91,92 +71,25 @@ export default function AdminUsersPage() {
         fetchUsers()
     }, [])
 
-    const handleApprove = async (user: UserProfile) => {
-        setActionLoading(user.id)
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-
-        const { error } = await supabase
-            .from('user_profiles')
-            .update({
-                is_approved: true,
-                status: 'approved',
-                approved_by: currentUser?.id,
-                approved_at: new Date().toISOString()
-            })
-            .eq('id', user.id)
-
-        if (error) {
-            toast.error('Onaylama başarısız', { description: error.message })
-        } else {
-            toast.success('Kullanıcı onaylandı', { description: user.email })
-            fetchUsers()
-        }
-        setActionLoading(null)
-    }
-
-    const handleReject = async () => {
-        if (!selectedUser) return
-        setActionLoading(selectedUser.id)
-
-        const { error } = await supabase
-            .from('user_profiles')
-            .update({
-                is_approved: false,
-                status: 'rejected',
-                rejected_reason: rejectReason || null
-            })
-            .eq('id', selectedUser.id)
-
-        if (error) {
-            toast.error('Reddetme başarısız', { description: error.message })
-        } else {
-            toast.success('Kullanıcı reddedildi', { description: selectedUser.email })
-            fetchUsers()
-        }
-        setRejectDialogOpen(false)
-        setSelectedUser(null)
-        setRejectReason('')
-        setActionLoading(null)
-    }
-
-    const handleRoleChange = async (user: UserProfile, newRole: 'user' | 'admin') => {
-        setActionLoading(user.id)
-
-        const { error } = await supabase
-            .from('user_profiles')
-            .update({ role: newRole })
-            .eq('id', user.id)
-
-        if (error) {
-            toast.error('Rol değiştirme başarısız', { description: error.message })
-        } else {
-            toast.success('Rol güncellendi', { description: `${user.email} artık ${newRole === 'admin' ? 'Admin' : 'Kullanıcı'}` })
-            fetchUsers()
-        }
-        setActionLoading(null)
-    }
-
     const handleDelete = async () => {
         if (!selectedUser) return
         setActionLoading(selectedUser.id)
 
         try {
-            // Silme işlemini logla
-            const { data: { user: currentUser } } = await supabase.auth.getUser()
+            const response = await fetch('/api/admin/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: selectedUser.id }),
+            })
 
-            // user_profiles tablosundan sil
-            const { error } = await supabase
-                .from('user_profiles')
-                .delete()
-                .eq('id', selectedUser.id)
+            const result = await response.json()
 
-            if (error) {
-                toast.error('Silme başarısız', { description: error.message })
+            if (!response.ok) {
+                toast.error('Silme başarısız', { description: result.error })
             } else {
                 toast.success('Kullanıcı silindi', {
                     description: `${selectedUser.email} başarıyla silindi.`,
                 })
-                console.log(`[AUDIT] Kullanıcı silindi: ${selectedUser.email} (${selectedUser.id}) - Silen: ${currentUser?.email}`)
                 fetchUsers()
             }
         } catch (error) {
@@ -189,31 +102,9 @@ export default function AdminUsersPage() {
     }
 
     const filteredUsers = users.filter(user => {
-        const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        return user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-        const matchesStatus = statusFilter === 'all' || user.status === statusFilter
-        return matchesSearch && matchesStatus
     })
-
-    const statusBadge = (status: string) => {
-        switch (status) {
-            case 'approved':
-                return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Onaylı</Badge>
-            case 'rejected':
-                return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Reddedildi</Badge>
-            default:
-                return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Bekliyor</Badge>
-        }
-    }
-
-    const roleBadge = (role: string) => {
-        if (role === 'admin') {
-            return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30"><ShieldCheck className="w-3 h-3 mr-1" />Admin</Badge>
-        }
-        return <Badge variant="outline" className="text-slate-400 border-slate-600"><Shield className="w-3 h-3 mr-1" />Kullanıcı</Badge>
-    }
-
-    const pendingCount = users.filter(u => u.status === 'pending').length
 
     return (
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -225,18 +116,15 @@ export default function AdminUsersPage() {
                         Kullanıcı Yönetimi
                     </h1>
                     <p className="text-slate-400 text-sm">
-                        Kullanıcı hesaplarını yönetin ve onaylayın
+                        Kayıtlı kullanıcıları görüntüleyin ve yönetin
                     </p>
                 </div>
-                {pendingCount > 0 && (
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-lg px-4 py-2">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {pendingCount} Bekleyen Onay
-                    </Badge>
-                )}
+                <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-lg px-4 py-2">
+                    {users.length} Kullanıcı
+                </Badge>
             </div>
 
-            {/* Filters */}
+            {/* Search */}
             <Card className="bg-slate-800/50 border-slate-700/50">
                 <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row gap-4">
@@ -249,17 +137,6 @@ export default function AdminUsersPage() {
                                 className="pl-10 bg-slate-700/50 border-slate-600 text-white"
                             />
                         </div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full md:w-48 bg-slate-700/50 border-slate-600 text-white">
-                                <SelectValue placeholder="Durum Filtresi" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-slate-800 border-slate-700">
-                                <SelectItem value="all">Tümü</SelectItem>
-                                <SelectItem value="pending">Bekleyen</SelectItem>
-                                <SelectItem value="approved">Onaylı</SelectItem>
-                                <SelectItem value="rejected">Reddedilen</SelectItem>
-                            </SelectContent>
-                        </Select>
                         <Button
                             variant="outline"
                             onClick={fetchUsers}
@@ -299,87 +176,26 @@ export default function AdminUsersPage() {
                                                 <p className="text-white font-medium text-sm truncate">{user.email}</p>
                                                 <p className="text-slate-400 text-xs mt-0.5">{user.full_name || '-'}</p>
                                             </div>
-                                            {statusBadge(user.status)}
+                                            <Badge variant="outline" className="text-slate-400 border-slate-600">
+                                                {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
+                                            </Badge>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            {roleBadge(user.role)}
                                             <span className="text-slate-500 text-xs">
                                                 {new Date(user.created_at).toLocaleDateString('tr-TR')}
                                             </span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-600/30">
-                                            {user.status === 'pending' && (
-                                                <>
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => handleApprove(user)}
-                                                        disabled={actionLoading === user.id}
-                                                        className="flex-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
-                                                    >
-                                                        {actionLoading === user.id ? (
-                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <Check className="h-4 w-4 mr-1" />
-                                                        )}
-                                                        Onayla
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            setSelectedUser(user)
-                                                            setRejectDialogOpen(true)
-                                                        }}
-                                                        className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                    >
-                                                        <X className="h-4 w-4 mr-1" />
-                                                        Reddet
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {user.status === 'approved' && (
-                                                <Select
-                                                    value={user.role}
-                                                    onValueChange={(value) => handleRoleChange(user, value as 'user' | 'admin')}
-                                                >
-                                                    <SelectTrigger className="w-full h-8 text-xs bg-slate-700/50 border-slate-600">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-slate-800 border-slate-700">
-                                                        <SelectItem value="user">Kullanıcı</SelectItem>
-                                                        <SelectItem value="admin">Admin</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
-                                            {user.status === 'rejected' && (
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => handleApprove(user)}
-                                                    disabled={actionLoading === user.id}
-                                                    className="w-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
-                                                >
-                                                    {actionLoading === user.id ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Check className="h-4 w-4 mr-1" />
-                                                    )}
-                                                    Onayla
-                                                </Button>
-                                            )}
-                                            {user.role !== 'admin' && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        setSelectedUser(user)
-                                                        setDeleteDialogOpen(true)
-                                                    }}
-                                                    disabled={actionLoading === user.id}
-                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setSelectedUser(user)
+                                                    setDeleteDialogOpen(true)
+                                                }}
+                                                disabled={actionLoading === user.id}
+                                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </div>
                                 ))}
@@ -395,7 +211,6 @@ export default function AdminUsersPage() {
                                         <TableRow className="border-slate-700 hover:bg-transparent">
                                             <TableHead className="text-slate-400">E-posta</TableHead>
                                             <TableHead className="text-slate-400">İsim</TableHead>
-                                            <TableHead className="text-slate-400">Durum</TableHead>
                                             <TableHead className="text-slate-400">Rol</TableHead>
                                             <TableHead className="text-slate-400">Kayıt Tarihi</TableHead>
                                             <TableHead className="text-slate-400 text-right">İşlemler</TableHead>
@@ -406,92 +221,34 @@ export default function AdminUsersPage() {
                                             <TableRow key={user.id} className="border-slate-700 hover:bg-slate-700/30">
                                                 <TableCell className="text-white font-medium">{user.email}</TableCell>
                                                 <TableCell className="text-slate-300">{user.full_name || '-'}</TableCell>
-                                                <TableCell>{statusBadge(user.status)}</TableCell>
-                                                <TableCell>{roleBadge(user.role)}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-slate-400 border-slate-600">
+                                                        {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-slate-400 text-sm">
                                                     {new Date(user.created_at).toLocaleDateString('tr-TR')}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {user.status === 'pending' && (
-                                                            <>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => handleApprove(user)}
-                                                                    disabled={actionLoading === user.id}
-                                                                    className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
-                                                                >
-                                                                    {actionLoading === user.id ? (
-                                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                                    ) : (
-                                                                        <Check className="h-4 w-4 mr-1" />
-                                                                    )}
-                                                                    Onayla
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={() => {
-                                                                        setSelectedUser(user)
-                                                                        setRejectDialogOpen(true)
-                                                                    }}
-                                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                                >
-                                                                    <X className="h-4 w-4 mr-1" />
-                                                                    Reddet
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                        {user.status === 'approved' && (
-                                                            <Select
-                                                                value={user.role}
-                                                                onValueChange={(value) => handleRoleChange(user, value as 'user' | 'admin')}
-                                                            >
-                                                                <SelectTrigger className="w-32 h-8 text-xs bg-slate-700/50 border-slate-600">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-slate-800 border-slate-700">
-                                                                    <SelectItem value="user">Kullanıcı</SelectItem>
-                                                                    <SelectItem value="admin">Admin</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        )}
-                                                        {user.status === 'rejected' && (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleApprove(user)}
-                                                                disabled={actionLoading === user.id}
-                                                                className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
-                                                            >
-                                                                {actionLoading === user.id ? (
-                                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                                ) : (
-                                                                    <Check className="h-4 w-4 mr-1" />
-                                                                )}
-                                                                Onayla
-                                                            </Button>
-                                                        )}
-                                                        {user.role !== 'admin' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => {
-                                                                    setSelectedUser(user)
-                                                                    setDeleteDialogOpen(true)
-                                                                }}
-                                                                disabled={actionLoading === user.id}
-                                                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setSelectedUser(user)
+                                                            setDeleteDialogOpen(true)
+                                                        }}
+                                                        disabled={actionLoading === user.id}
+                                                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-1" />
+                                                        Sil
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                         {filteredUsers.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-12 text-slate-400">
+                                                <TableCell colSpan={5} className="text-center py-12 text-slate-400">
                                                     Kullanıcı bulunamadı
                                                 </TableCell>
                                             </TableRow>
@@ -503,45 +260,6 @@ export default function AdminUsersPage() {
                     )}
                 </CardContent>
             </Card>
-
-            {/* Reject Dialog */}
-            <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-                <DialogContent className="bg-slate-800 border-slate-700 text-white">
-                    <DialogHeader>
-                        <DialogTitle>Kullanıcıyı Reddet</DialogTitle>
-                        <DialogDescription className="text-slate-400">
-                            {selectedUser?.email} kullanıcısını reddetmek istediğinize emin misiniz?
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Textarea
-                            placeholder="Red sebebi (isteğe bağlı)"
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            className="bg-slate-700/50 border-slate-600 text-white"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setRejectDialogOpen(false)}
-                            className="border-slate-600 text-slate-300"
-                        >
-                            İptal
-                        </Button>
-                        <Button
-                            onClick={handleReject}
-                            disabled={actionLoading === selectedUser?.id}
-                            className="bg-red-500 hover:bg-red-600 text-white"
-                        >
-                            {actionLoading === selectedUser?.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : null}
-                            Reddet
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
 
             {/* Delete Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -555,7 +273,7 @@ export default function AdminUsersPage() {
                     <div className="py-2">
                         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                             <p className="text-xs text-red-300">
-                                <strong>⚠️ Dikkat:</strong> Bu işlem geri alınamaz. Kullanıcı profili kalıcı olarak silinecektir.
+                                <strong>⚠️ Dikkat:</strong> Bu işlem geri alınamaz. Kullanıcı hesabı ve profili kalıcı olarak silinecektir.
                             </p>
                         </div>
                     </div>

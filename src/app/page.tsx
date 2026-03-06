@@ -30,7 +30,8 @@ import {
   FileText,
   Users,
   ShieldCheck,
-  User
+  User,
+  Settings
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
@@ -53,30 +54,25 @@ export default function DashboardPage() {
   const [lowStockItems, setLowStockItems] = useState<StockFullView[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  // Check if current user is admin
+  // Get user name
   useEffect(() => {
-    const checkAdmin = async () => {
+    const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('role, full_name')
+          .select('full_name')
           .eq('id', user.id)
           .single()
 
-        // Set user name
         setUserName(profile?.full_name || user.email?.split('@')[0] || null)
-
-        // Admin kontrolü yalnızca veritabanı role alanına dayalı
-        setIsAdmin(profile?.role === 'admin')
       }
     }
-    checkAdmin()
+    fetchUser()
   }, [supabase])
 
   const fetchDashboardData = useCallback(async () => {
@@ -225,18 +221,16 @@ export default function DashboardPage() {
                   <span className="text-sm text-slate-300">{userName}</span>
                 </div>
               )}
-              {isAdmin && (
-                <Link href="/admin">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 sm:w-auto sm:px-4"
-                  >
-                    <ShieldCheck className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Admin Panel</span>
-                  </Button>
-                </Link>
-              )}
+              <Link href="/admin">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 sm:w-auto sm:px-4"
+                >
+                  <Settings className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Yönetim</span>
+                </Button>
+              </Link>
               <Button
                 variant="ghost"
                 size="icon"
@@ -361,21 +355,19 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {isAdmin && (
-            <Link href="/admin/users">
-              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer group">
-                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-white text-sm sm:text-base">Kullanıcılar</p>
-                    <p className="text-[10px] sm:text-xs text-slate-400">Admin paneli</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+          <Link href="/admin/users">
+            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer group">
+              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white text-sm sm:text-base">Kullanıcılar</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Yönetim paneli</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Stats Cards */}
