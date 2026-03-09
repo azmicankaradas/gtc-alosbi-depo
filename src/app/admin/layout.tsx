@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useUserRole } from '@/lib/hooks/useUserRole'
 
 const navItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -36,24 +37,21 @@ export default function AdminLayout({
     const router = useRouter()
     const pathname = usePathname()
     const supabase = createClient()
-    const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
-    const [userEmail, setUserEmail] = useState<string>('')
+    const { isAdmin, loading: roleLoading, userEmail } = useUserRole()
+    const [isAdminState, setIsAdminState] = useState<boolean | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
     useEffect(() => {
-        const checkAuth = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                router.push('/login')
-                return
-            }
+        if (roleLoading) return
 
-            setUserEmail(user.email || '')
-            setIsAdmin(true)
+        if (!isAdmin) {
+            setError('Bu sayfaya erişim yetkiniz yok. Sadece admin kullanıcılar erişebilir.')
+            return
         }
-        checkAuth()
-    }, [supabase, router])
+
+        setIsAdminState(true)
+    }, [isAdmin, roleLoading])
 
     // Close sidebar on route change (mobile)
     useEffect(() => {
@@ -89,7 +87,7 @@ export default function AdminLayout({
         )
     }
 
-    if (isAdmin === null) {
+    if (isAdminState === null) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />

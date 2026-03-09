@@ -131,6 +131,29 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
+    // Admin ve yazma rotalarını koru
+    const adminRoutes = ['/admin']
+    const writeRoutes = ['/stock/entry', '/stock/out']
+    const protectedRoutes = [...adminRoutes, ...writeRoutes]
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+
+    if (user && isProtectedRoute) {
+        // user_profiles tablosundan rol kontrolü
+        const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        const userRole = profile?.role || 'user'
+
+        if (userRole !== 'admin') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/'
+            return NextResponse.redirect(url)
+        }
+    }
+
     // IMPORTANT: You *must* return the supabaseResponse object as it is.
     return supabaseResponse
 }

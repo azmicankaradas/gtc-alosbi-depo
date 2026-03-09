@@ -31,11 +31,14 @@ import {
   Users,
   ShieldCheck,
   User,
-  Settings
+  Settings,
+  Eye,
+  Shield
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
 import type { StockSummary, StockFullView } from '@/types/database'
+import { useUserRole } from '@/lib/hooks/useUserRole'
 
 interface DashboardStats {
   totalProducts: number
@@ -54,26 +57,9 @@ export default function DashboardPage() {
   const [lowStockItems, setLowStockItems] = useState<StockFullView[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [userName, setUserName] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
-
-  // Get user name
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single()
-
-        setUserName(profile?.full_name || user.email?.split('@')[0] || null)
-      }
-    }
-    fetchUser()
-  }, [supabase])
+  const { isAdmin, isObserver, userName, loading: roleLoading } = useUserRole()
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -214,23 +200,34 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* User name display */}
+              {/* User name + role display */}
               {userName && (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/50">
                   <User className="w-4 h-4 text-emerald-400" />
                   <span className="text-sm text-slate-300">{userName}</span>
+                  {isAdmin ? (
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
+                      <Shield className="w-3 h-3 mr-0.5" />Admin
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30 text-[10px] px-1.5 py-0">
+                      <Eye className="w-3 h-3 mr-0.5" />Gözlemci
+                    </Badge>
+                  )}
                 </div>
               )}
-              <Link href="/admin">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 sm:w-auto sm:px-4"
-                >
-                  <Settings className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Yönetim</span>
-                </Button>
-              </Link>
+              {isAdmin && (
+                <Link href="/admin">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 sm:w-auto sm:px-4"
+                  >
+                    <Settings className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Yönetim</span>
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -257,19 +254,22 @@ export default function DashboardPage() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Actions */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Link href="/stock/entry">
-            <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">Stok Girişi</p>
-                  <p className="text-[10px] sm:text-xs text-slate-400">Yeni ürün ekle</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* Stok Girişi - Sadece Admin */}
+          {isAdmin && (
+            <Link href="/stock/entry">
+              <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer group">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm sm:text-base">Stok Girişi</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Yeni ürün ekle</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           <Link href="/search">
             <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer group">
@@ -285,19 +285,22 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/stock/out">
-            <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20 hover:border-orange-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">Stok Çıkışı</p>
-                  <p className="text-[10px] sm:text-xs text-slate-400">Ürün çıkar</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* Stok Çıkışı - Sadece Admin */}
+          {isAdmin && (
+            <Link href="/stock/out">
+              <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20 hover:border-orange-500/40 transition-all cursor-pointer group">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm sm:text-base">Stok Çıkışı</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Ürün çıkar</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           <Link href="/products">
             <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20 hover:border-cyan-500/40 transition-all cursor-pointer group">
@@ -307,7 +310,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-white text-sm sm:text-base">Ürünler</p>
-                  <p className="text-[10px] sm:text-xs text-slate-400">Ürün yönetimi</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Ürün görüntüle</p>
                 </div>
               </CardContent>
             </Card>
@@ -355,19 +358,22 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/admin/users">
-            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer group">
-              <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-sm sm:text-base">Kullanıcılar</p>
-                  <p className="text-[10px] sm:text-xs text-slate-400">Yönetim paneli</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* Kullanıcılar - Sadece Admin */}
+          {isAdmin && (
+            <Link href="/admin/users">
+              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer group">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm sm:text-base">Kullanıcılar</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Yönetim paneli</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
 
         {/* Stats Cards */}
