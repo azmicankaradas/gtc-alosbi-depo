@@ -40,7 +40,7 @@ export default function SearchPage() {
         setHasSearched(true)
 
         try {
-            // Use the search_stock function we created in SQL
+            // Use the search_stock function (word-order independent, AND logic)
             const { data, error } = await supabase.rpc('search_stock', {
                 search_term: searchQuery.trim()
             })
@@ -48,27 +48,35 @@ export default function SearchPage() {
             if (error) throw error
 
             setResults(data || [])
-        } catch (error) {
-            console.error('Search error:', error)
-
-            // Fallback: kelime sırası bağımsız arama
+        } catch {
+            // Fallback: istemci taraflı kelime-sırası-bağımsız arama (AND mantığı)
             try {
                 const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean)
-                let query = supabase
+                const { data, error: fetchErr } = await supabase
                     .from('stock_full_view')
                     .select('*')
+                    .limit(500)
 
-                // Her kelime için OR filtresi oluştur ve hepsini AND ile birleştir
-                for (const word of words) {
-                    query = query.or(
-                        `sku.ilike.%${word}%,product_name.ilike.%${word}%,brand.ilike.%${word}%,size.ilike.%${word}%,location_code.ilike.%${word}%`
-                    )
-                }
+                if (fetchErr) throw fetchErr
 
-                const { data } = await query.limit(100)
+                const filtered = (data as StockFullView[] || []).filter(item => {
+                    const combined = [
+                        item.sku,
+                        item.product_name,
+                        item.brand,
+                        item.model,
+                        item.size,
+                        item.color,
+                        item.category,
+                        item.fabric,
+                        item.location_code
+                    ].filter(Boolean).join(' ').toLowerCase()
 
-                setResults((data as StockFullView[]) || [])
-            } catch (fallbackError) {
+                    return words.every(word => combined.includes(word))
+                })
+
+                setResults(filtered)
+            } catch {
                 toast.error('Arama sırasında hata oluştu')
                 setResults([])
             }

@@ -104,23 +104,56 @@ export default function StockOutPage() {
         loadRequesters()
     }, [])
 
-    // Search for stock items using existing view
+    // Search for stock items - word-order independent search
     const handleSearch = async () => {
         if (!searchQuery.trim()) return
 
         setIsSearching(true)
         try {
-            const { data, error } = await supabase
-                .from('stock_full_view')
-                .select('*')
-                .or(`sku.ilike.%${searchQuery}%,product_name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%,size.ilike.%${searchQuery}%,location_code.ilike.%${searchQuery}%`)
-                .gt('quantity', 0)
-                .limit(20)
+            // Try the search_stock RPC function first (word-order independent, AND logic)
+            const { data, error } = await supabase.rpc('search_stock', {
+                search_term: searchQuery.trim()
+            })
 
             if (error) throw error
-            setStockItems((data as StockFullView[]) || [])
-        } catch (error) {
-            toast.error('Arama sırasında hata oluştu')
+
+            // Filter to only show items with quantity > 0
+            const available = (data || []).filter((item: StockFullView) => item.quantity > 0)
+            setStockItems(available.slice(0, 20))
+        } catch {
+            // Fallback: istemci taraflı kelime-sırası-bağımsız arama (AND mantığı)
+            // Tüm alanları birleştir, her kelime birleşik metinde geçmeli
+            try {
+                const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean)
+                const { data, error: fetchErr } = await supabase
+                    .from('stock_full_view')
+                    .select('*')
+                    .gt('quantity', 0)
+                    .limit(500)
+
+                if (fetchErr) throw fetchErr
+
+                const filtered = (data as StockFullView[] || []).filter(item => {
+                    const combined = [
+                        item.sku,
+                        item.product_name,
+                        item.brand,
+                        item.model,
+                        item.size,
+                        item.color,
+                        item.category,
+                        item.fabric,
+                        item.location_code
+                    ].filter(Boolean).join(' ').toLowerCase()
+
+                    return words.every(word => combined.includes(word))
+                })
+
+                setStockItems(filtered.slice(0, 20))
+            } catch {
+                toast.error('Arama sırasında hata oluştu')
+                setStockItems([])
+            }
         } finally {
             setIsSearching(false)
         }
