@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ import {
 import { toast } from 'sonner'
 import { FLOOR_NAMES } from '@/types/database'
 import type { FloorType } from '@/types/database'
+import { useUserRole } from '@/lib/hooks/useUserRole'
 
 // Step type for the wizard flow
 type CountStep = 'setup' | 'counting' | 'review' | 'complete'
@@ -49,6 +51,8 @@ interface CountItem {
 }
 
 export default function StockCountPage() {
+    const router = useRouter()
+    const { isAdmin, loading: roleLoading } = useUserRole()
     const [step, setStep] = useState<CountStep>('setup')
     const [isLoading, setIsLoading] = useState(false)
 
@@ -71,6 +75,13 @@ export default function StockCountPage() {
     }>({ total: 0, counted: 0, matched: 0, surplus: 0, deficit: 0 })
 
     const supabase = createClient()
+
+    // Gözlemci kullanıcıları ana sayfaya yönlendir
+    useEffect(() => {
+        if (!roleLoading && !isAdmin) {
+            router.push('/')
+        }
+    }, [isAdmin, roleLoading, router])
 
     // Start counting session
     const handleStartCount = async () => {

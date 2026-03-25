@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -22,8 +23,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { StockFullView } from '@/types/database'
+import { useUserRole } from '@/lib/hooks/useUserRole'
 
 export default function StockOutputPage() {
+    const router = useRouter()
+    const { isAdmin, loading: roleLoading } = useUserRole()
     const [searchQuery, setSearchQuery] = useState('')
     const [stockItems, setStockItems] = useState<StockFullView[]>([])
     const [selectedStock, setSelectedStock] = useState<StockFullView | null>(null)
@@ -31,6 +35,13 @@ export default function StockOutputPage() {
     const [isSearching, setIsSearching] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const supabase = createClient()
+
+    // Gözlemci kullanıcıları ana sayfaya yönlendir
+    useEffect(() => {
+        if (!roleLoading && !isAdmin) {
+            router.push('/')
+        }
+    }, [isAdmin, roleLoading, router])
 
     // Search for stock items - word-order independent search (AND logic)
     const handleSearch = async () => {

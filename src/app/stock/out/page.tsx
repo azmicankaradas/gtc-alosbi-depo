@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ import {
 import { toast } from 'sonner'
 import type { StockFullView } from '@/types/database'
 import { COLOR_NAMES, TEXTILE_CATEGORY_NAMES, FABRIC_NAMES } from '@/types/database'
+import { useUserRole } from '@/lib/hooks/useUserRole'
 import { generateStockOutReceipt, downloadReceipt, type StockOutReceiptData } from '@/lib/pdf-generator'
 
 // Document code generator
@@ -65,6 +67,8 @@ interface TransactionResult {
 }
 
 export default function StockOutPage() {
+    const router = useRouter()
+    const { isAdmin, loading: roleLoading } = useUserRole()
     const [searchQuery, setSearchQuery] = useState('')
     const [stockItems, setStockItems] = useState<StockFullView[]>([])
     const [selectedStock, setSelectedStock] = useState<StockFullView | null>(null)
@@ -84,6 +88,13 @@ export default function StockOutPage() {
     const [requesterOptions, setRequesterOptions] = useState<string[]>([])
 
     const supabase = createClient()
+
+    // Gözlemci kullanıcıları ana sayfaya yönlendir
+    useEffect(() => {
+        if (!roleLoading && !isAdmin) {
+            router.push('/')
+        }
+    }, [isAdmin, roleLoading, router])
 
     // Load requesters from database
     useEffect(() => {

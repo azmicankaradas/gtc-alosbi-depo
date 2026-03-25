@@ -33,7 +33,8 @@ import {
   User,
   Settings,
   Eye,
-  Shield
+  Shield,
+  ClipboardCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StockPieChart, LocationChart } from '@/components/dashboard/charts'
@@ -357,6 +358,23 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+
+          {/* Stok Sayım - Sadece Admin */}
+          {isAdmin && (
+            <Link href="/stock/count">
+              <Card className="bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border-indigo-500/20 hover:border-indigo-500/40 transition-all cursor-pointer group">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm sm:text-base">Stok Sayım</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Envanter sayımı</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {/* Kullanıcılar - Sadece Admin */}
           {isAdmin && (

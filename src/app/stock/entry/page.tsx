@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -24,8 +25,11 @@ import {
 import { toast } from 'sonner'
 import type { Product, Variant, Location, ProductGroup, TextileCategory, FabricType, ColorType } from '@/types/database'
 import { TEXTILE_CATEGORY_NAMES, FABRIC_NAMES, COLOR_NAMES, TEXTILE_SIZES } from '@/types/database'
+import { useUserRole } from '@/lib/hooks/useUserRole'
 
 export default function StockEntryPage() {
+    const router = useRouter()
+    const { isAdmin, loading: roleLoading } = useUserRole()
     const [products, setProducts] = useState<Product[]>([])
     const [variants, setVariants] = useState<Variant[]>([])
     const [locations, setLocations] = useState<Location[]>([])
@@ -53,6 +57,13 @@ export default function StockEntryPage() {
     const [quantity, setQuantity] = useState('')
 
     const supabase = createClient()
+
+    // Gözlemci kullanıcıları ana sayfaya yönlendir
+    useEffect(() => {
+        if (!roleLoading && !isAdmin) {
+            router.push('/')
+        }
+    }, [isAdmin, roleLoading, router])
 
     // Fetch initial data
     useEffect(() => {
