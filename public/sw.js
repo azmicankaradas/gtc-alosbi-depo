@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gtc-depo-v1';
+const CACHE_NAME = 'gtc-depo-v2';
 
 const PRECACHE_ASSETS = [
     '/',
