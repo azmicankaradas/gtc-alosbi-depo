@@ -24,11 +24,11 @@ const passwordRules = [
 ]
 
 // E-posta domain kısıtlaması
-const ALLOWED_DOMAIN = '@gtcendustriyel.com'
+const ALLOWED_DOMAINS = ['@gtcendustriyel.com', '@glbtradecorp.com']
 
 const isEmailAllowed = (email: string): boolean => {
     const lowerEmail = email.toLowerCase().trim()
-    return lowerEmail.endsWith(ALLOWED_DOMAIN.toLowerCase())
+    return ALLOWED_DOMAINS.some(domain => lowerEmail.endsWith(domain.toLowerCase()))
 }
 
 export default function LoginPage() {
@@ -95,7 +95,7 @@ export default function LoginPage() {
         // E-posta domain kontrolü
         if (!isEmailAllowed(email)) {
             toast.error('Geçersiz E-posta Adresi', {
-                description: `Yalnızca ${ALLOWED_DOMAIN} uzantılı e-postalar ile kayıt olabilirsiniz.`,
+                description: `Yalnızca ${ALLOWED_DOMAINS.join(' veya ')} uzantılı e-postalar ile kayıt olabilirsiniz.`,
             })
             return
         }
@@ -200,7 +200,7 @@ export default function LoginPage() {
                                     <Input
                                         id="email"
                                         type="email"
-                                        placeholder="ornek@gtcendustriyel.com"
+                                        placeholder="ornek@gtcendustriyel.com veya @glbtradecorp.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -278,14 +278,14 @@ export default function LoginPage() {
                                     <Input
                                         id="reg-email"
                                         type="email"
-                                        placeholder="ornek@gtcendustriyel.com"
+                                        placeholder="ornek@gtcendustriyel.com veya @glbtradecorp.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
                                         className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20"
                                     />
                                     <p className="text-[11px] text-slate-500">
-                                        Yalnızca <span className="text-emerald-400 font-medium">{ALLOWED_DOMAIN}</span> uzantılı e-postalar kabul edilir
+                                        Yalnızca <span className="text-emerald-400 font-medium">{ALLOWED_DOMAINS.join(' veya ')}</span> uzantılı e-postalar kabul edilir
                                     </p>
                                 </div>
                                 <div className="space-y-2">
