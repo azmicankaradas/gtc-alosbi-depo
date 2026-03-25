@@ -177,7 +177,14 @@ export default function LoginPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Tabs defaultValue="login" className="w-full">
+                    <Tabs defaultValue="login" className="w-full" onValueChange={() => {
+                        setEmail('')
+                        setPassword('')
+                        setConfirmPassword('')
+                        setFirstName('')
+                        setLastName('')
+                        setShowPassword(false)
+                    }}>
                         <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
                             <TabsTrigger
                                 value="login"
